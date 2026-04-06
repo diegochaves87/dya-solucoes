@@ -1,0 +1,2870 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>DYA Soluções</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#050714;--card:#0d1225;--border:#1e2a4a;
+  --p1:#6c3bfc;--p2:#3b82f6;--p3:#06b6d4;
+  --grad:linear-gradient(135deg,#6c3bfc,#3b82f6,#06b6d4);
+  --green:#10b981;--amber:#f59e0b;--red:#ef4444;--purple:#8b5cf6;
+  --text:#e8eaf6;--muted:#6b7db3;
+}
+body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:var(--text);background:var(--bg);max-width:430px;margin:0 auto;min-height:100vh;}
+/* SPLASH */
+.splash{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;max-width:430px;margin:0 auto;}
+.splash.hide{display:none;}
+.splash-icon{width:88px;height:88px;border-radius:22px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;color:#fff;margin-bottom:16px;}
+.splash-name{font-size:24px;font-weight:800;color:#fff;}
+.splash-sub{font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:4px;}
+/* AUTH */
+.auth-wrap{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px 20px;}
+.auth-wrap.on{display:flex;}
+.auth-box{width:100%;max-width:380px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px 24px;}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px;}
+.auth-logo-icon{width:38px;height:38px;border-radius:10px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;}
+.auth-logo-name{font-size:16px;font-weight:700;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.auth-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:6px;}
+.auth-sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6;}
+.fld{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.fld label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.fld input,
+.fld select,
+.fld textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;padding:11px 13px;color:var(--text);font-size:14px;outline:none;width:100%;font-family:inherit;}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--p1);}
+.fld select option{background:#0d1225;}
+.fld textarea{resize:vertical;min-height:70px;}
+.btn{width:100%;padding:13px;border-radius:12px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:.2s;}
+.btn-grad{background:var(--grad);color:#fff;}
+.btn-grad:active{opacity:.85;}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-sm{padding:8px 14px;font-size:12px;border-radius:8px;border:none;cursor:pointer;font-weight:600;}
+.btn-green{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3);}
+.btn-red{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.3);}
+.btn-blue{background:rgba(59,130,246,.1);color:var(--p2);border:1px solid rgba(59,130,246,.3);}
+.btn-purple{background:rgba(108,59,252,.15);color:#a78bfa;border:1px solid rgba(108,59,252,.3);}
+.btn-amber{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.3);}
+.btn-wa{background:rgba(37,211,102,.1);color:#25d366;border:1px solid rgba(37,211,102,.3);}
+.msg-err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--red);margin-bottom:12px;display:none;}
+.msg-ok{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--green);margin-bottom:12px;display:none;}
+/* APP SHELL */
+.app{display:flex;flex-direction:column;min-height:100vh;display:none;}
+.app.on{display:flex;}
+.hdr{background:rgba(13,18,37,.97);backdrop-filter:blur(10px);border-bottom:.5px solid var(--border);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:50;}
+.hdr-l{display:flex;align-items:center;gap:8px;}
+.hdr-icon{width:26px;height:26px;border-radius:7px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff;}
+.hdr-brand{font-size:10px;font-weight:700;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:.5px;}
+.hdr-title{font-size:13px;font-weight:500;color:var(--text);}
+.bk-btn{background:rgba(108,59,252,.2);border:.5px solid rgba(108,59,252,.3);color:#fff;width:30px;height:30px;border-radius:50%;font-size:15px;cursor:pointer;display:none;align-items:center;justify-content:center;}
+.bk-btn.on{display:flex;}
+.user-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;}
+.scr{display:none;flex:1;overflow-y:auto;padding-bottom:72px;}
+.scr.on{display:block;}
+/* BOTTOM NAV */
+.bnav{display:flex;border-top:.5px solid var(--border);background:rgba(13,18,37,.97);backdrop-filter:blur(10px);position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50;}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 5px;cursor:pointer;gap:2px;border-top:2px solid transparent;position:relative;}
+.ni.on{border-top-color:var(--p1);}
+.ni-i{font-size:16px;line-height:1;}
+.ni-l{font-size:9px;color:var(--muted);white-space:nowrap;}
+.ni.on .ni-l{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:600;}
+.badge-n{position:absolute;top:4px;right:14px;background:var(--red);color:#fff;font-size:8px;font-weight:700;min-width:14px;height:14px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px;}
+/* CARDS / LISTS */
+.li{padding:13px 16px;border-bottom:.5px solid var(--border);display:flex;align-items:flex-start;gap:12px;cursor:pointer;}
+.li:active{background:rgba(108,59,252,.04);}
+.li-body{flex:1;min-width:0;}
+.li-title{font-size:14px;font-weight:500;color:var(--text);}
+.li-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.li-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0;}
+/* PILLS */
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;}
+.pg{background:rgba(16,185,129,.15);color:#10b981;border:.5px solid rgba(16,185,129,.3);}
+.pr{background:rgba(239,68,68,.12);color:#ef4444;border:.5px solid rgba(239,68,68,.3);}
+.pa{background:rgba(245,158,11,.12);color:#f59e0b;border:.5px solid rgba(245,158,11,.3);}
+.pb{background:rgba(59,130,246,.12);color:#3b82f6;border:.5px solid rgba(59,130,246,.3);}
+.pp{background:rgba(139,92,246,.12);color:#8b5cf6;border:.5px solid rgba(139,92,246,.3);}
+.pz{background:rgba(107,125,179,.1);color:var(--muted);border:.5px solid var(--border);}
+.pprov{background:rgba(245,158,11,.12);color:#f59e0b;border:.5px solid rgba(245,158,11,.3);}
+/* SECTION */
+.sec{padding:14px 16px;border-bottom:4px solid rgba(255,255,255,.02);}
+.sec-t{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+.row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:.5px solid var(--border);gap:12px;}
+.row:last-child{border-bottom:none;}
+.row-k{font-size:12px;color:var(--muted);}
+.row-v{font-size:13px;font-weight:500;color:var(--text);text-align:right;}
+/* DETAIL */
+.det-hdr{padding:20px 16px 14px;border-bottom:.5px solid var(--border);}
+.det-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:4px;}
+.det-sub{font-size:13px;color:var(--muted);}
+.det-acts{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-bottom:.5px solid var(--border);}
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end;max-width:430px;margin:0 auto;}
+.modal-bg.on{display:flex;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:90vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:700;color:#fff;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;}
+.modal-close{background:rgba(255,255,255,.08);border:none;color:var(--muted);width:28px;height:28px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;}
+.kpi-v{font-size:22px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.kpi-l{font-size:11px;color:var(--muted);margin-top:3px;}
+/* PROGRESS */
+.prog-bar{background:rgba(255,255,255,.06);border-radius:4px;height:6px;overflow:hidden;margin-top:6px;}
+.prog-fill{height:100%;border-radius:4px;background:var(--grad);}
+/* ALERT */
+.alert{padding:12px 14px;border-radius:10px;font-size:12px;line-height:1.6;margin:10px 16px;}
+.alert-a{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--amber);}
+.alert-g{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--green);}
+.alert-b{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:var(--p2);}
+/* FAB */
+.fab{position:fixed;bottom:80px;right:50%;transform:translateX(calc(50% - 16px + 215px - 32px));width:52px;height:52px;border-radius:50%;background:var(--grad);border:none;color:#fff;font-size:24px;cursor:pointer;box-shadow:0 4px 20px rgba(108,59,252,.4);z-index:40;display:flex;align-items:center;justify-content:center;}
+.fab:active{transform:translateX(calc(50% - 16px + 215px - 32px)) scale(.95);}
+/* STEPS */
+.timeline{padding:0 16px;}
+.tl-item{display:flex;gap:12px;padding:10px 0;}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.tl-line{width:1px;background:var(--border);margin:0 4px;}
+.tl-body{flex:1;}
+.tl-t{font-size:13px;font-weight:500;color:var(--text);}
+.tl-s{font-size:11px;color:var(--muted);margin-top:1px;}
+/* STARS */
+.stars{display:flex;gap:4px;}
+.star{font-size:20px;cursor:pointer;color:rgba(255,255,255,.2);}
+.star.on{color:var(--amber);}
+/* TAGS CHIPS */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.chip{background:rgba(108,59,252,.1);border:1px solid rgba(108,59,252,.2);border-radius:20px;padding:3px 10px;font-size:11px;color:#a78bfa;}
+/* NOTICE BANNER */
+.notice{background:rgba(245,158,11,.08);border-top:1px solid rgba(245,158,11,.2);border-bottom:1px solid rgba(245,158,11,.2);padding:10px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;}
+.notice-text{font-size:12px;color:var(--amber);flex:1;line-height:1.5;}
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:.5px solid var(--border);overflow-x:auto;}
+.tab{padding:10px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;}
+.tab.on{color:var(--p2);border-bottom-color:var(--p2);}
+/* EMPTY */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;}
+.empty-i{font-size:48px;opacity:.3;}
+.empty-t{font-size:15px;font-weight:500;color:var(--muted);}
+.empty-s{font-size:13px;color:rgba(107,125,179,.6);text-align:center;}
+/* LOADING */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;gap:10px;color:var(--muted);font-size:13px;}
+.spin{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--p1);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* CLIENT ROW */
+.cl-row{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;}
+.cl-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.cl-name{font-size:14px;font-weight:600;color:#fff;}
+.cl-loc{font-size:12px;color:var(--muted);}
+/* PROV BADGE */
+.prov-banner{background:linear-gradient(135deg,rgba(245,158,11,.1),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:12px 14px;margin:12px 16px;display:flex;gap:10px;align-items:flex-start;}
+.prov-badge{background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;color:var(--amber);white-space:nowrap;}
+.prov-text{font-size:12px;color:var(--amber);line-height:1.6;}
+
+/* DRAG & DROP CLIENTES */
+.cl-drag{cursor:grab;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;transition:.2s;}
+.cl-drag.dragging{opacity:.4;border-style:dashed;}
+.cl-drag.drag-over{border-color:var(--p1);background:rgba(108,59,252,.06);}
+.cl-drag-handle{color:var(--muted);font-size:18px;cursor:grab;padding:0 6px 0 0;flex-shrink:0;}
+.cl-row-wrap{display:flex;align-items:flex-start;gap:8px;}
+.cl-pos{width:26px;height:26px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;margin-top:2px;}
+/* NOTAS AGRUPADAS */
+.nfe-row{background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:4px;font-size:12px;}
+.nfe-row:last-child{margin-bottom:0;}
+.nfe-key{color:var(--muted);font-size:11px;}
+.nfe-val{color:var(--text);font-weight:500;}
+/* BUSCA CLIENTE */
+.cl-search-results{background:var(--card);border:1px solid var(--border);border-radius:10px;max-height:180px;overflow-y:auto;margin-top:4px;}
+.cl-search-item{padding:10px 14px;cursor:pointer;border-bottom:.5px solid var(--border);font-size:13px;}
+.cl-search-item:last-child{border-bottom:none;}
+.cl-search-item:active{background:rgba(108,59,252,.08);}
+.cl-search-nome{font-weight:600;color:var(--text);}
+.cl-search-cnpj{font-size:11px;color:var(--muted);}
+/* ROMANEIO */
+.romaneio-page{background:white;padding:32px;font-family:'Inter',system-ui,sans-serif;color:#1a1a2e;max-width:900px;margin:0 auto;}
+.rom-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #0f3460;}
+.rom-title{font-size:28px;font-weight:900;color:#0f3460;}
+.rom-sub{font-size:13px;color:#6b7db3;margin-top:4px;}
+.rom-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.rom-block{background:#f8f9ff;border:1px solid #e8eaf6;border-radius:10px;padding:14px;}
+.rom-block-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;margin-bottom:8px;}
+.rom-field{display:flex;justify-content:space-between;padding:4px 0;border-bottom:.5px solid #f0f2f8;font-size:12px;}
+.rom-field:last-child{border-bottom:none;}
+.rom-field-k{color:#9ca3af;}
+.rom-field-v{font-weight:600;color:#1a1a2e;}
+.rom-table{width:100%;border-collapse:collapse;margin-top:16px;}
+.rom-table th{background:#0f3460;color:white;padding:10px 12px;text-align:left;font-size:11px;font-weight:600;}
+.rom-table td{padding:10px 12px;border-bottom:1px solid #f0f2f8;font-size:12px;}
+.rom-table tr:nth-child(even) td{background:#f8f9ff;}
+.rom-total{background:#0f3460!important;color:white;font-weight:700;}
+.rom-total td{color:white!important;border-bottom:none!important;}
+.rom-footer{margin-top:32px;display:flex;justify-content:space-between;align-items:flex-end;}
+.rom-sign{text-align:center;}
+.rom-sign-line{width:200px;border-top:1px solid #1a1a2e;margin:0 auto 6px;}
+.rom-sign-name{font-size:12px;font-weight:600;color:#1a1a2e;}
+.rom-sign-role{font-size:11px;color:#9ca3af;}
+
+
+/* APROVAÇÕES */
+.aprov-card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:12px;overflow:hidden;}
+.aprov-hdr{padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:.5px solid var(--border);}
+.aprov-tipo{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:20px;}
+.aprov-tipo.edit{background:rgba(59,130,246,.15);color:var(--p2);}
+.aprov-tipo.del{background:rgba(239,68,68,.12);color:var(--red);}
+.aprov-user{font-size:11px;color:var(--muted);}
+.aprov-body{padding:12px 14px;}
+.aprov-diff{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.aprov-col{border-radius:8px;padding:10px;}
+.aprov-col.before{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);}
+.aprov-col.after{background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);}
+.aprov-col-title{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+.aprov-col.before .aprov-col-title{color:var(--red);}
+.aprov-col.after .aprov-col-title{color:var(--green);}
+.aprov-field{font-size:12px;padding:3px 0;border-bottom:.5px solid rgba(255,255,255,.05);}
+.aprov-field:last-child{border-bottom:none;}
+.aprov-field-k{color:var(--muted);font-size:11px;}
+.aprov-field-v{color:var(--text);}
+.aprov-field-v.changed{color:var(--amber);font-weight:600;}
+.aprov-acts{display:flex;gap:8px;}
+/* ARQUIVADOS */
+.archived-banner{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 14px;margin:8px 16px;display:flex;align-items:center;gap:10px;}
+
+</style>
+  </head>
+<body>
+
+<!-- SPLASH -->
+<div class="splash" id="splash">
+  <div class="splash-icon">DYA</div>
+  <div class="splash-name">DYA Soluções</div>
+  <div class="splash-sub">Logística & Gestão</div>
+</div>
+
+<!-- AUTH: LOGIN -->
+<div class="auth-wrap" id="authLogin">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">DYA</div>
+      <div class="auth-logo-name">DYA Soluções</div>
+    </div>
+    <div class="auth-title">Acessar o sistema</div>
+    <div class="auth-sub">Digite seu e-mail cadastrado para entrar.</div>
+    <div id="loginErr" class="msg-err"></div>
+    <div class="fld"><label>E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com"></div>
+    <button class="btn btn-grad" onclick="doLogin()">Entrar no DYA Soluções</button>
+    <div style="text-align:center;margin-top:14px;">
+      <span style="font-size:12px;color:var(--muted);">Novo usuário? </span>
+      <span style="font-size:12px;color:var(--p2);cursor:pointer;" onclick="showScreen('authCadastro')">Solicitar acesso →</span>
+    </div>
+  </div>
+</div>
+
+<!-- AUTH: CADASTRO NOVO USUÁRIO -->
+<div class="auth-wrap" id="authCadastro">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">DYA</div>
+      <div class="auth-logo-name">DYA Soluções</div>
+    </div>
+    <div class="auth-title">Solicitar acesso</div>
+    <div class="auth-sub">Preencha seus dados. Após aprovação do gestor, você receberá confirmação.</div>
+    <div id="cadErr" class="msg-err"></div>
+    <div id="cadOk" class="msg-ok"></div>
+    <div class="fld"><label>Nome completo</label><input type="text" id="cadNome" placeholder="Seu nome completo"></div>
+    <div class="fld"><label>Apelido / Como prefere ser chamado</label><input type="text" id="cadApelido" placeholder="Ex: Sabi, Beti..."></div>
+    <div class="fld"><label>E-mail corporativo</label><input type="email" id="cadEmail" placeholder="seu@marispescados.com.br"></div>
+    <div class="fld"><label>Telefone / WhatsApp</label><input type="tel" id="cadTel" placeholder="(85) 99999-9999"></div>
+    <div class="fld"><label>Cargo / Função</label><input type="text" id="cadCargo" placeholder="Ex: Assistente Operacional"></div>
+    <div class="fld"><label>Cidade</label><input type="text" id="cadCidade" placeholder="Ex: Fortaleza"></div>
+    <div class="fld"><label>Perfil solicitado</label>
+      <select id="cadPerfil">
+        <option value="">Selecione...</option>
+        <option value="operacional">Operacional</option>
+        <option value="visualizador">Visualizador</option>
+      </select>
+    </div>
+    <button class="btn btn-grad" onclick="doCadastro()" style="margin-bottom:10px;">Enviar solicitação</button>
+    <button class="btn btn-outline" onclick="showScreen('authLogin')">← Voltar ao login</button>
+  </div>
+</div>
+
+<!-- PRIMEIRO ACESSO (usuário convidado que ainda não preencheu dados) -->
+<div class="auth-wrap" id="authPrimeiroAcesso">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">DYA</div>
+      <div class="auth-logo-name">Bem-vindo ao DYA Soluções!</div>
+    </div>
+    <div class="auth-title">Complete seu cadastro</div>
+    <div class="auth-sub">Antes de acessar o sistema, preencha seus dados. Isso é feito uma única vez.</div>
+    <div id="paErr" class="msg-err"></div>
+    <div class="fld"><label>Nome completo</label><input type="text" id="paNome" placeholder="Seu nome completo"></div>
+    <div class="fld"><label>Apelido</label><input type="text" id="paApelido" placeholder="Como prefere ser chamado"></div>
+    <div class="fld"><label>Telefone / WhatsApp</label><input type="tel" id="paTel" placeholder="(85) 99999-9999"></div>
+    <div class="fld"><label>Cargo / Função</label><input type="text" id="paCargo" placeholder="Ex: Assistente Operacional"></div>
+    <div class="fld"><label>Cidade</label><input type="text" id="paCidade" placeholder="Ex: Fortaleza"></div>
+    <button class="btn btn-grad" onclick="doPrimeiroAcesso()">Salvar e acessar o sistema</button>
+  </div>
+</div>
+
+<!-- APP PRINCIPAL -->
+<div class="app" id="appMain">
+  <div class="hdr">
+    <div class="hdr-l">
+      <button class="bk-btn" id="bkBtn" onclick="goBack()">←</button>
+      <div class="hdr-icon">DYA</div>
+      <div>
+        <div class="hdr-brand">DYA SOLUÇÕES</div>
+        <div class="hdr-title" id="hdrTitle">Início</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div id="userAv" class="user-av" onclick="goTo('usuarios')" title="Minha conta"></div>
+    </div>
+  </div>
+
+  <!-- TELA: HOME -->
+  <div class="scr" id="scrHome">
+    <div id="pendingBanner"></div>
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="loading" style="grid-column:1/-1"><div class="spin"></div> Carregando...</div>
+    </div>
+    <div class="sec">
+      <div class="sec-t">Acesso rápido</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="btn btn-purple" onclick="goTo('cargas')" style="padding:12px;">🚛 Cargas</button>
+        <button class="btn btn-blue" onclick="goTo('motoristas')" style="padding:12px;">👤 Motoristas</button>
+        <button class="btn btn-green" onclick="goTo('ctes')" style="padding:12px;">📄 CTEs</button>
+        <button class="btn btn-amber" onclick="goTo('recibos')" style="padding:12px;">🧾 Recibos</button>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-t">Cargas recentes</div>
+      <div id="homeCargasRecentes"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+  </div>
+
+  <!-- TELA: CARGAS LISTA -->
+  <div class="scr" id="scrCargas">
+    <div class="tabs">
+      <div class="tab on" id="tabAtivas" onclick="filtrarCargas('ativas')">Ativas</div>
+      <div class="tab" id="tabProv" onclick="filtrarCargas('provisorias')">Provisórias</div>
+      <div class="tab" id="tabConcluidas" onclick="filtrarCargas('concluidas')">Concluídas</div>
+      <div class="tab" id="tabTodas" onclick="filtrarCargas('todas')">Todas</div>
+    </div>
+    <div id="cargasList"><div class="loading"><div class="spin"></div> Carregando...</div></div>
+  </div>
+
+  <!-- TELA: DETALHE CARGA -->
+  <div class="scr" id="scrCargaDet">
+    <div id="cargaDetContent"></div>
+  </div>
+
+  <!-- TELA: MOTORISTAS -->
+  <div class="scr" id="scrMotoristas">
+    <div id="motoristasList"><div class="loading"><div class="spin"></div> Carregando...</div></div>
+  </div>
+
+  <!-- TELA: DETALHE MOTORISTA -->
+  <div class="scr" id="scrMotoristaDet">
+    <div id="motoristaDetContent"></div>
+  </div>
+
+  <!-- TELA: TRANSPORTADORAS -->
+  <div class="scr" id="scrTransportadoras">
+    <div class="tabs">
+      <div class="tab on" id="tabTransp" onclick="filtrarTransp('transp')">Transportadoras</div>
+      <div class="tab" id="tabQuartas" onclick="filtrarTransp('quartas')">4ªs Empresas</div>
+    </div>
+    <div id="transpList"><div class="loading"><div class="spin"></div> Carregando...</div></div>
+  </div>
+
+  <!-- TELA: CTEs -->
+  <div class="scr" id="scrCtes">
+    <div class="tabs">
+      <div class="tab on" id="tabCtePend" onclick="filtrarCtes('pendente')">Pendentes</div>
+      <div class="tab" id="tabCteDiverg" onclick="filtrarCtes('divergencia')">Divergências</div>
+      <div class="tab" id="tabCteEmit" onclick="filtrarCtes('emitido')">Emitidos</div>
+      <div class="tab" id="tabCteReceb" onclick="filtrarCtes('recebido')">Recebidos</div>
+    </div>
+    <div id="ctesList"><div class="loading"><div class="spin"></div> Carregando...</div></div>
+  </div>
+
+  <!-- TELA: RECIBOS -->
+  <div class="scr" id="scrRecibos">
+    <div id="recibosList"><div class="loading"><div class="spin"></div> Carregando...</div></div>
+  </div>
+
+  <!-- TELA: PESQUISAS -->
+  <div class="scr" id="scrPesquisas">
+    <div id="pesquisasList"><div class="loading"><div class="spin"></div> Carregando...</div></div>
+  </div>
+
+  <!-- TELA: DASHBOARD -->
+  <div class="scr" id="scrAprovacoes">
+    <div id="aprovacoesList"><div class="loading"><div class="spin"></div></div></div>
+  </div>
+
+  <div class="scr" id="scrDashboard">
+    <div id="dashContent"><div class="loading"><div class="spin"></div> Carregando...</div></div>
+  </div>
+
+  <!-- TELA: USUÁRIOS -->
+  <div class="scr" id="scrUsuarios">
+    <div id="usuariosList"><div class="loading"><div class="spin"></div> Carregando...</div></div>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" id="fabBtn" onclick="openFab()">+</button>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bnav">
+    <div class="ni on" id="ni-home" onclick="goTo('home')"><div class="ni-i">🏠</div><div class="ni-l">Início</div></div>
+    <div class="ni" id="ni-cargas" onclick="goTo('cargas')"><div class="ni-i">🚛</div><div class="ni-l">Cargas</div></div>
+    <div class="ni" id="ni-motoristas" onclick="goTo('motoristas')"><div class="ni-i">👤</div><div class="ni-l">Motoristas</div></div>
+    <div class="ni" id="ni-transportadoras" onclick="goTo('transportadoras')"><div class="ni-i">🏢</div><div class="ni-l">Transp.</div></div>
+    <div class="ni" id="ni-ctes" onclick="goTo('ctes')"><div class="ni-i">📄</div><div class="ni-l">CTEs</div><div class="badge-n" id="badgeCte" style="display:none"></div></div>
+    <div class="ni" id="ni-dashboard" onclick="goTo('dashboard')"><div class="ni-i">📊</div><div class="ni-l">Dashboard</div></div>
+    <div class="ni" id="ni-aprovacoes" onclick="goTo('aprovacoes')" style="display:none;"><div class="ni-i">✅</div><div class="ni-l">Aprovações</div><div class="badge-n" id="badgeAprov" style="display:none"></div></div>
+    <div class="ni" id="ni-usuarios" onclick="goTo('usuarios')"><div class="ni-i">👥</div><div class="ni-l">Usuários</div><div class="badge-n" id="badgeUser" style="display:none"></div></div>
+  </nav>
+</div>
+
+<!-- MODAIS -->
+<!-- Modal: Nova Carga -->
+<div class="modal-bg" id="modalNovaCarga">
+  <div class="modal">
+    <div class="modal-title">Nova Carga <button class="modal-close" onclick="closeModal('modalNovaCarga')">×</button></div>
+    <div class="fld"><label>Tipo de carga</label>
+      <select id="ncTipo" onchange="toggleNcInfo()">
+        <option value="provisoria">📋 Provisória (sem NF emitida)</option>
+        <option value="ativa">✅ Ativa (NF emitida)</option>
+      </select>
+    </div>
+    <div id="ncProvInfo" class="alert alert-a" style="margin:0 0 12px;">ℹ️ Carga Provisória: registre dados estimados. Converta para Ativa ao emitir as NFs e gere o Romaneio de Embarque a qualquer momento.</div>
+    <div class="fld"><label>Nº Embarque</label><input type="text" id="ncEmbarque" placeholder="Ex: 043.04.2026"></div>
+    <div class="fld"><label>Rota</label><input type="text" id="ncRota" placeholder="Ex: CE → SP"></div>
+    <div class="fld"><label>Data de saída</label><input type="date" id="ncData"></div>
+    <div class="fld"><label>Tipo de carga</label>
+      <select id="ncTipoCarga">
+        <option value="Paletizada">Paletizada</option>
+        <option value="Estivada">Estivada</option>
+      </select>
+    </div>
+    <div class="fld"><label>Frete</label>
+      <select id="ncFrete">
+        <option value="CIF">CIF (por conta da Maris)</option>
+        <option value="FOB">FOB (por conta do cliente)</option>
+      </select>
+    </div>
+    <div class="fld"><label>Contratante</label>
+      <select id="ncContratante">
+        <option value="Diego Chaves">Diego Chaves</option>
+        <option value="Admilson José">Admilson José</option>
+      </select>
+    </div>
+    <div class="fld"><label>Transportadora</label>
+      <select id="ncTransp"><option value="">Selecione...</option></select>
+    </div>
+    <div class="fld"><label>Motorista</label>
+      <select id="ncMotorista"><option value="">Selecione...</option></select>
+    </div>
+    <div class="fld"><label>Valor global do frete (R$)</label><input type="number" id="ncValorFrete" placeholder="0,00"></div>
+    <div class="fld"><label>Observações</label><textarea id="ncObs" placeholder="Informações adicionais..."></textarea></div>
+    <button class="btn btn-grad" onclick="salvarNovaCarga()">Criar carga</button>
+  </div>
+</div>
+
+<!-- Modal: Adicionar/Editar Cliente Provisório -->
+<div class="modal-bg" id="modalNovoCliente">
+  <div class="modal">
+    <div class="modal-title" id="modalClienteTitle">Adicionar Cliente <button class="modal-close" onclick="closeModal('modalNovoCliente')">×</button></div>
+    <div class="alert alert-b" id="clSearchAlert" style="margin:0 0 12px;font-size:12px;">Busque o cliente pelo CNPJ ou Razão Social para evitar duplicidade.</div>
+    <div class="fld">
+      <label>Buscar cliente cadastrado</label>
+      <input type="text" id="clBusca" placeholder="CNPJ ou Razão Social..." oninput="buscarCliente()">
+      <div id="clSearchResults" class="cl-search-results" style="display:none;"></div>
+    </div>
+    <div class="fld"><label>Razão Social</label><input type="text" id="clNome" placeholder="Razão Social do cliente"></div>
+    <div class="fld"><label>CNPJ</label><input type="text" id="clCNPJ" placeholder="00.000.000/0001-00"></div>
+    <div class="fld"><label>Cidade</label><input type="text" id="clCidade" placeholder="Ex: São Paulo"></div>
+    <div class="fld"><label>UF</label>
+      <select id="clUF">
+        <option value="">Selecione...</option>
+        <option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option>
+        <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+        <option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option>
+        <option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
+        <option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option>
+        <option>SP</option><option>TO</option>
+      </select>
+    </div>
+    <div class="fld"><label>Região</label>
+      <select id="clRegiao">
+        <option value="">Selecione...</option>
+        <option value="NORDESTE">Nordeste</option>
+        <option value="SUDESTE">Sudeste</option>
+        <option value="SUL">Sul</option>
+        <option value="CENTRO-OESTE">Centro-Oeste</option>
+        <option value="NORTE">Norte</option>
+      </select>
+    </div>
+    <div class="fld"><label>Peso Líquido estimado (kg)</label><input type="number" id="clPesoLiq" placeholder="0" oninput="calcPrecoMedio()"></div>
+    <div class="fld"><label>Valor estimado da carga (R$)</label><input type="number" id="clValorNF" placeholder="0,00" oninput="calcPrecoMedio()"></div>
+    <div style="background:rgba(108,59,252,.08);border:1px solid rgba(108,59,252,.2);border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:12px;color:var(--muted);">Preço médio (R$/kg)</span>
+      <span id="clPrecoMedio" style="font-size:16px;font-weight:700;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">—</span>
+    </div>
+    <div class="fld"><label>Previsão de entrega</label><input type="date" id="clPrevisao"></div>
+    <div class="fld"><label>Nº Agendamento (se houver)</label><input type="text" id="clAgendNum" placeholder="Deixe vazio se não houver"></div>
+    <div class="fld"><label>Data/hora agendamento</label><input type="datetime-local" id="clAgendData"></div>
+    <div class="fld"><label>Local de entrega / Observações</label><textarea id="clObs" placeholder="Doca, endereço, horário preferencial..."></textarea></div>
+    <input type="hidden" id="clEditId">
+    <button class="btn btn-grad" onclick="salvarNovoCliente()">Salvar cliente</button>
+  </div>
+</div>
+
+<!-- Modal: Novo Motorista -->
+<div class="modal-bg" id="modalNovoMotorista">
+  <div class="modal">
+    <div class="modal-title">Novo Motorista <button class="modal-close" onclick="closeModal('modalNovoMotorista')">×</button></div>
+    <div class="fld"><label>Nome completo</label><input type="text" id="mtNome" placeholder="Nome do motorista"></div>
+    <div class="fld"><label>CPF</label><input type="text" id="mtCPF" placeholder="000.000.000-00"></div>
+    <div class="fld"><label>Telefone / WhatsApp</label><input type="tel" id="mtTel" placeholder="(85) 99999-9999"></div>
+    <div class="fld"><label>Placa cavalo</label><input type="text" id="mtPlacaC" placeholder="AAA-0000"></div>
+    <div class="fld"><label>Placa carreta</label><input type="text" id="mtPlacaR" placeholder="AAA-0000"></div>
+    <div class="fld"><label>Validade CNH</label><input type="date" id="mtCNH"></div>
+    <div class="fld"><label>Transportadora vinculada</label>
+      <select id="mtTransp"><option value="">Selecione...</option></select>
+    </div>
+    <button class="btn btn-grad" onclick="salvarNovoMotorista()">Cadastrar motorista</button>
+  </div>
+</div>
+
+<!-- Modal: Nova Transportadora -->
+<div class="modal-bg" id="modalNovaTransp">
+  <div class="modal">
+    <div class="modal-title">Nova Transportadora <button class="modal-close" onclick="closeModal('modalNovaTransp')">×</button></div>
+    <div class="fld"><label>Tipo</label>
+      <select id="trTipo" onchange="toggleQuarta()">
+        <option value="transportadora">Transportadora contratada</option>
+        <option value="quarta">4ª Empresa (uso interno)</option>
+      </select>
+    </div>
+    <div class="fld"><label>Nome / Razão Social</label><input type="text" id="trNome" placeholder="Nome da empresa"></div>
+    <div class="fld"><label>Apelido / Código</label><input type="text" id="trApelido" placeholder="Ex: Frozen Brasil"></div>
+    <div class="fld"><label>CNPJ</label><input type="text" id="trCNPJ" placeholder="00.000.000/0001-00"></div>
+    <div class="fld"><label>Telefone</label><input type="tel" id="trTel" placeholder="(00) 99999-9999"></div>
+    <div class="fld"><label>UF base</label><input type="text" id="trUF" placeholder="CE"></div>
+    <div id="trTranspRef" class="fld" style="display:none"><label>Transportadora contratada (responsável)</label>
+      <select id="trRefTransp"><option value="">Selecione...</option></select>
+    </div>
+    <button class="btn btn-grad" onclick="salvarNovaTransp()">Cadastrar empresa</button>
+  </div>
+</div>
+
+<!-- Modal: Convidar Usuário -->
+<div class="modal-bg" id="modalConvidarUser">
+  <div class="modal">
+    <div class="modal-title">Convidar Usuário <button class="modal-close" onclick="closeModal('modalConvidarUser')">×</button></div>
+    <div class="alert alert-b" style="margin:0 0 14px;">O convite será enviado via WhatsApp com o link de acesso e instruções de cadastro.</div>
+    <div class="fld"><label>Nome do convidado</label><input type="text" id="invNome" placeholder="Nome completo"></div>
+    <div class="fld"><label>Telefone / WhatsApp</label><input type="tel" id="invTel" placeholder="(85) 99999-9999"></div>
+    <div class="fld"><label>E-mail corporativo</label><input type="email" id="invEmail" placeholder="usuario@marispescados.com.br"></div>
+    <div class="fld"><label>Perfil</label>
+      <select id="invPerfil">
+        <option value="operacional">Operacional</option>
+        <option value="visualizador">Visualizador</option>
+        <option value="gestor">Gestor</option>
+      </select>
+    </div>
+    <button class="btn btn-wa" onclick="enviarConviteWA()" style="margin-bottom:8px;">📱 Enviar convite via WhatsApp</button>
+    <button class="btn btn-outline" onclick="closeModal('modalConvidarUser')">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal: Converter Provisória → Ativa (lançamento de NFe) -->
+<div class="modal-bg" id="modalConverterProv">
+  <div class="modal">
+    <div class="modal-title">Ativar Carga — Lançar NFe <button class="modal-close" onclick="closeModal('modalConverterProv')">×</button></div>
+    <div class="alert alert-g" style="margin:0 0 14px;font-size:12px;">As NFs foram emitidas. Lance cada NFe separadamente por cliente. O app consolida automaticamente.</div>
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">Selecione o cliente desta NFe:</div>
+    <div class="fld">
+      <label>Buscar cliente da carga</label>
+      <select id="convClienteSelect"><option value="">Selecione o cliente...</option></select>
+    </div>
+    <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px;" id="convClienteInfo" style="display:none;"></div>
+    <div class="fld"><label>Número da NFe</label><input type="text" id="convNFe" placeholder="Ex: 151724"></div>
+    <div class="fld"><label>Data de faturamento</label><input type="date" id="convDataFat"></div>
+    <div class="fld"><label>Valor da NFe (R$)</label><input type="number" id="convValorNFe" placeholder="0,00" oninput="calcConvPreco()"></div>
+    <div class="fld"><label>Peso Líquido real (kg)</label><input type="number" id="convPesoLiq" placeholder="0" oninput="calcConvPreco()"></div>
+    <div class="fld"><label>Peso Bruto real (kg)</label><input type="number" id="convPesoBruto" placeholder="0"></div>
+    <div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:10px 14px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:12px;color:var(--muted);">Preço médio (R$/kg)</span>
+        <span id="convPrecoMedio" style="font-size:15px;font-weight:700;color:var(--green);">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:12px;color:var(--muted);">% da carga</span>
+        <span id="convPctCarga" style="font-size:15px;font-weight:700;color:var(--p2);">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:var(--muted);">Rateio de frete</span>
+        <span id="convRateio" style="font-size:15px;font-weight:700;color:var(--amber);">—</span>
+      </div>
+    </div>
+    <div class="fld"><label>Observações</label><textarea id="convObs" placeholder="Informações adicionais..."></textarea></div>
+    <button class="btn btn-grad" onclick="salvarNFe()" style="margin-bottom:8px;">+ Lançar esta NFe</button>
+    <div id="nfesLancadas" style="margin-bottom:12px;"></div>
+    <button class="btn btn-green" id="btnAtivarCarga" onclick="confirmarAtivacao()" style="display:none;">✅ Ativar carga</button>
+  </div>
+</div>
+
+<!-- Modal: Check-in -->
+<div class="modal-bg" id="modalCheckin">
+  <div class="modal">
+    <div class="modal-title">Check-in de Saída <button class="modal-close" onclick="closeModal('modalCheckin')">×</button></div>
+    <div class="fld"><label>Temperatura (°C)</label><input type="number" id="ciTemp" value="-18"></div>
+    <div class="fld"><label>Horário de saída</label><input type="datetime-local" id="ciHora"></div>
+    <div class="fld"><label>Observações</label><textarea id="ciObs" placeholder="Estado da carga, lacre..."></textarea></div>
+    <button class="btn btn-grad" onclick="confirmarCheckin()">Confirmar saída</button>
+  </div>
+</div>
+
+<!-- Modal: Registrar Sinistro -->
+<div class="modal-bg" id="modalSinistro">
+  <div class="modal">
+    <div class="modal-title">Registrar Sinistro <button class="modal-close" onclick="closeModal('modalSinistro')">×</button></div>
+    <div class="fld"><label>Tipo de sinistro</label>
+      <select id="sinTipo">
+        <option value="mecanico">Mecânico / Pane</option>
+        <option value="hidraulico">Hidráulico</option>
+        <option value="acidente">Acidente de trânsito</option>
+        <option value="temperatura">Problema de temperatura</option>
+        <option value="roubo">Roubo / Furto</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="fld"><label>Descrição</label><textarea id="sinDesc" placeholder="Descreva o ocorrido..."></textarea></div>
+    <div class="fld"><label>Nova previsão de entrega</label><input type="date" id="sinPrevisao"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <input type="checkbox" id="sinIsentar" checked style="width:16px;height:16px;">
+      <label for="sinIsentar" style="font-size:13px;color:var(--text);">Isentar motorista de penalização</label>
+    </div>
+    <button class="btn btn-grad" onclick="confirmarSinistro()">Registrar sinistro</button>
+  </div>
+</div>
+
+<!-- Modal: Lançar Recibo -->
+<div class="modal-bg" id="modalRecibo">
+  <div class="modal">
+    <div class="modal-title">Lançar Recibo <button class="modal-close" onclick="closeModal('modalRecibo')">×</button></div>
+    <div class="fld"><label>Número do recibo</label><input type="text" id="recNum" placeholder="RD-2026-0001"></div>
+    <div class="fld"><label>Data da descarga</label><input type="date" id="recData"></div>
+    <div class="fld"><label>Horário</label><input type="time" id="recHora"></div>
+    <div class="fld"><label>Responsável (quem assinou)</label><input type="text" id="recResp" placeholder="Nome do responsável"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <input type="checkbox" id="recAssinado" checked style="width:16px;height:16px;">
+      <label for="recAssinado" style="font-size:13px;color:var(--text);">Assinado pelo destinatário</label>
+    </div>
+    <div class="fld"><label>Observações</label><textarea id="recObs" placeholder="Avarias, ocorrências..."></textarea></div>
+    <button class="btn btn-grad" onclick="confirmarRecibo()">Lançar recibo</button>
+  </div>
+</div>
+
+<!-- Modal: Pesquisa Satisfação -->
+<div class="modal-bg" id="modalPesquisa">
+  <div class="modal">
+    <div class="modal-title">Pesquisa de Satisfação <button class="modal-close" onclick="closeModal('modalPesquisa')">×</button></div>
+    <div id="pesqContent"></div>
+  </div>
+</div>
+
+<!-- Modal: Avaliar Motorista -->
+<div class="modal-bg" id="modalAvaliarMot">
+  <div class="modal">
+    <div class="modal-title">Avaliar Motorista <button class="modal-close" onclick="closeModal('modalAvaliarMot')">×</button></div>
+    <div id="avalMotContent"></div>
+  </div>
+</div>
+
+<!-- Modal: Editar Carga -->
+<div class="modal-bg" id="modalEditarCarga">
+  <div class="modal">
+    <div class="modal-title">Editar Carga <button class="modal-close" onclick="closeModal('modalEditarCarga')">×</button></div>
+    <div class="fld"><label>Nº Embarque</label><input type="text" id="ecEmbarque"></div>
+    <div class="fld"><label>Rota</label><input type="text" id="ecRota"></div>
+    <div class="fld"><label>Data de saída</label><input type="date" id="ecData"></div>
+    <div class="fld"><label>Tipo de carga</label>
+      <select id="ecTipoCarga"><option value="Paletizada">Paletizada</option><option value="Estivada">Estivada</option></select>
+    </div>
+    <div class="fld"><label>Frete</label>
+      <select id="ecFrete"><option value="CIF">CIF</option><option value="FOB">FOB</option></select>
+    </div>
+    <div class="fld"><label>Contratante</label>
+      <select id="ecContratante"><option value="Diego Chaves">Diego Chaves</option><option value="Admilson José">Admilson José</option></select>
+    </div>
+    <div class="fld"><label>Transportadora</label><select id="ecTransp"><option value="">Selecione...</option></select></div>
+    <div class="fld"><label>Motorista</label><select id="ecMotorista"><option value="">Selecione...</option></select></div>
+    <div class="fld"><label>Valor do frete (R$)</label><input type="number" id="ecValorFrete"></div>
+    <div class="fld"><label>Observações</label><textarea id="ecObs"></textarea></div>
+    <input type="hidden" id="ecId">
+    <button class="btn btn-grad" onclick="submeterEdicao('carga')" style="margin-bottom:8px;">📤 Submeter para aprovação</button>
+    <div style="font-size:11px;color:var(--muted);text-align:center;">A alteração só será aplicada após aprovação do gestor.</div>
+  </div>
+</div>
+
+<!-- Modal: Editar Motorista -->
+<div class="modal-bg" id="modalEditarMotorista">
+  <div class="modal">
+    <div class="modal-title">Editar Motorista <button class="modal-close" onclick="closeModal('modalEditarMotorista')">×</button></div>
+    <div class="fld"><label>Nome completo</label><input type="text" id="emNome"></div>
+    <div class="fld"><label>CPF</label><input type="text" id="emCPF"></div>
+    <div class="fld"><label>Telefone / WhatsApp</label><input type="tel" id="emTel"></div>
+    <div class="fld"><label>Placa cavalo</label><input type="text" id="emPlacaC"></div>
+    <div class="fld"><label>Placa carreta</label><input type="text" id="emPlacaR"></div>
+    <div class="fld"><label>Validade CNH</label><input type="date" id="emCNH"></div>
+    <div class="fld"><label>Transportadora vinculada</label><select id="emTransp"><option value="">Selecione...</option></select></div>
+    <input type="hidden" id="emId">
+    <button class="btn btn-grad" onclick="submeterEdicao('motorista')" style="margin-bottom:8px;">📤 Submeter para aprovação</button>
+    <div style="font-size:11px;color:var(--muted);text-align:center;">A alteração só será aplicada após aprovação do gestor.</div>
+  </div>
+</div>
+
+<!-- Modal: Editar Transportadora -->
+<div class="modal-bg" id="modalEditarTransp">
+  <div class="modal">
+    <div class="modal-title">Editar Transportadora <button class="modal-close" onclick="closeModal('modalEditarTransp')">×</button></div>
+    <div class="fld"><label>Nome / Razão Social</label><input type="text" id="etNome"></div>
+    <div class="fld"><label>Apelido / Código</label><input type="text" id="etApelido"></div>
+    <div class="fld"><label>CNPJ</label><input type="text" id="etCNPJ"></div>
+    <div class="fld"><label>Telefone</label><input type="tel" id="etTel"></div>
+    <div class="fld"><label>UF base</label><input type="text" id="etUF"></div>
+    <input type="hidden" id="etId">
+    <button class="btn btn-grad" onclick="submeterEdicao('transportadora')" style="margin-bottom:8px;">📤 Submeter para aprovação</button>
+    <div style="font-size:11px;color:var(--muted);text-align:center;">A alteração só será aplicada após aprovação do gestor.</div>
+  </div>
+</div>
+
+
+<script>
+
+// ═══════════════════════════════════════════════════════════════════
+// FIREBASE FIRESTORE — REST API PURA (sem CDN, funciona em qualquer browser)
+// ═══════════════════════════════════════════════════════════════════
+const _PROJ = 'dya-solucoes';
+const _KEY  = 'AIzaSyDosUYSRFHaxJhBbeyv4m77w9MszrHtKm4';
+const _BASE = `https://firestore.googleapis.com/v1/projects/${_PROJ}/databases/(default)/documents`;
+
+// Converter JS → Firestore value
+function _toFB(val) {
+  if (val === null || val === undefined) return {nullValue: null};
+  if (typeof val === 'boolean') return {booleanValue: val};
+  if (typeof val === 'number') return Number.isInteger(val) ? {integerValue: String(val)} : {doubleValue: val};
+  if (typeof val === 'string') return {stringValue: val};
+  if (val && val._isFBTimestamp) return {timestampValue: val._ts};
+  if (val && val.toDate) return {timestampValue: val._ts || new Date().toISOString()};
+  if (val instanceof Date) return {timestampValue: val.toISOString()};
+  if (Array.isArray(val)) return {arrayValue: {values: val.map(_toFB)}};
+  if (typeof val === 'object') {
+    const fields = {};
+    Object.entries(val).forEach(([k,v]) => { if(v !== undefined) fields[k] = _toFB(v); });
+    return {mapValue: {fields}};
+  }
+  return {nullValue: null};
+}
+
+// Converter Firestore value → JS
+function _fromFB(val) {
+  if (!val) return null;
+  if ('stringValue' in val) return val.stringValue;
+  if ('integerValue' in val) return Number(val.integerValue);
+  if ('doubleValue' in val) return Number(val.doubleValue);
+  if ('booleanValue' in val) return val.booleanValue;
+  if ('nullValue' in val) return null;
+  if ('timestampValue' in val) return { toDate: () => new Date(val.timestampValue), _ts: val.timestampValue, _isFBTimestamp: true };
+  if ('arrayValue' in val) return (val.arrayValue && val.arrayValue.values || []).map(_fromFB);
+  if ('mapValue' in val) {
+    const obj = {};
+    if (val.mapValue && val.mapValue.fields) Object.entries(val.mapValue && val.mapValue.fields).forEach(([k,v]) => { obj[k] = _fromFB(v); });
+    return obj;
+  }
+  return null;
+}
+
+// Converter documento Firestore → objeto JS com id
+function _docToObj(fbDoc) {
+  const obj = {};
+  if (fbDoc.fields) Object.entries(fbDoc.fields).forEach(([k,v]) => { obj[k] = _fromFB(v); });
+  const parts = (fbDoc.name || '').split('/');
+  obj.__id = parts[parts.length - 1];
+  return obj;
+}
+
+// Chamada REST genérica
+async function _rest(method, path, body) {
+  const url = `${_BASE}${path}?key=${_KEY}`;
+  const opts = { method, headers: {'Content-Type': 'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error && err.error.message || `HTTP ${r.status}`);
+  }
+  return r.json();
+}
+
+// ── Referências (simulam SDK) ─────────────────────────────────────
+function collection(_, colPath) { return { _type:'col', _path: colPath }; }
+function doc(_, ...args) {
+  const path = args.join('/');
+  const parts = path.split('/');
+  return { _type:'doc', _col: parts.slice(0,-1).join('/'), _id: parts[parts.length-1], _path: path };
+}
+
+// ── Operações ─────────────────────────────────────────────────────
+async function getDoc(ref) {
+  try {
+    const data = await _rest('GET', `/${ref._path}`);
+    const obj = _docToObj(data);
+    return { exists: () => true, data: () => obj, id: obj.__id };
+  } catch(e) {
+    return { exists: () => false, data: () => null, id: ref._id };
+  }
+}
+
+async function getDocs(ref) {
+  try {
+    let url;
+    if (ref._type === 'col') {
+      url = `/${ref._path}`;
+    } else if (ref._type === 'query') {
+      // Usar runQuery
+      return await _runQuery(ref);
+    } else {
+      url = `/${ref._path}`;
+    }
+    const data = await _rest('GET', url);
+    const docs = (data && data.documents || []).map(d => {
+      const obj = _docToObj(d);
+      return { id: obj.__id, data: () => obj, exists: () => true };
+    });
+    return { docs, forEach: (fn) => docs.forEach(fn), size: docs.length };
+  } catch(e) {
+    console.warn('getDocs error:', e);
+    return { docs: [], forEach: () => {}, size: 0 };
+  }
+}
+
+async function _runQuery(ref) {
+  const body = { structuredQuery: { from: [{ collectionId: ref._col }] } };
+  if (ref._wheres && ref._wheres.length > 0) {
+    const filters = ref._wheres.map(w => ({
+      fieldFilter: {
+        field: { fieldPath: w.field },
+        op: { '==':'EQUAL','!=':'NOT_EQUAL','<':'LESS_THAN','<=':'LESS_THAN_OR_EQUAL','>':'GREATER_THAN','>=':'GREATER_THAN_OR_EQUAL','in':'IN','array-contains':'ARRAY_CONTAINS' }[w.op] || 'EQUAL',
+        value: _toFB(w.val)
+      }
+    }));
+    body.structuredQuery.where = filters.length === 1 ? filters[0] : { compositeFilter: { op: 'AND', filters } };
+  }
+  if (ref._orderBy) body.structuredQuery.orderBy = [{ field: { fieldPath: ref._orderBy.field }, direction: ref._orderBy.dir === 'desc' ? 'DESCENDING' : 'ASCENDING' }];
+  if (ref._limit) body.structuredQuery.limit = ref._limit;
+
+  try {
+    const results = await _rest('POST', ':runQuery', body);
+    const docs = (results || []).filter(r => r && r.document).map(r => {
+      const obj = _docToObj(r && r.document);
+      return { id: obj.__id, data: () => obj, exists: () => true };
+    });
+    return { docs, forEach: (fn) => docs.forEach(fn), size: docs.length };
+  } catch(e) {
+    console.warn('runQuery error:', e);
+    return { docs: [], forEach: () => {}, size: 0 };
+  }
+}
+
+async function addDoc(ref, data) {
+  const fields = {};
+  Object.entries(data).forEach(([k,v]) => { if(v !== undefined) fields[k] = _toFB(v); });
+  const result = await _rest('POST', `/${ref._path}`, { fields });
+  const parts = result.name.split('/');
+  return { id: parts[parts.length-1] };
+}
+
+async function updateDoc(ref, data) {
+  // Patch parcial
+  const fields = {};
+  const updateMask = [];
+  Object.entries(data).forEach(([k,v]) => {
+    if (v !== undefined) { fields[k] = _toFB(v); updateMask.push(k); }
+  });
+  const maskStr = updateMask.map(f => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&');
+  const url = `${_BASE}/${ref._path}?key=${_KEY}&${maskStr}`;
+  const r = await fetch(url, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({fields}) });
+  if (!r.ok) throw new Error(`updateDoc failed: ${r.status}`);
+  return r.json();
+}
+
+async function deleteDoc(ref) {
+  await _rest('DELETE', `/${ref._path}`);
+}
+
+// ── query / where / orderBy ───────────────────────────────────────
+function query(ref, ...constraints) {
+  const q = { _type:'query', _col: ref._path, _wheres: [], _orderBy: null, _limit: null };
+  constraints.forEach(c => {
+    if (!c) return;
+    if (c._type === 'where') q._wheres.push(c);
+    if (c._type === 'orderBy') q._orderBy = c;
+    if (c._type === 'limit') q._limit = c.n;
+  });
+  return q;
+}
+function where(field, op, val) { return { _type:'where', field, op, val }; }
+function orderBy(field, dir='asc') { return { _type:'orderBy', field, dir }; }
+
+// ── serverTimestamp / Timestamp ───────────────────────────────────
+function serverTimestamp() { return { _isFBTimestamp: true, _ts: new Date().toISOString() }; }
+const Timestamp = {
+  fromDate: (d) => ({ _isFBTimestamp: true, _ts: d.toISOString(), toDate: () => d })
+};
+
+// ── db global ─────────────────────────────────────────────────────
+const db = {};
+
+function initFirebase() { return true; } // já inicializado acima
+
+// ─── ESTADO GLOBAL ──────────────────────────────────────
+let currentUser = null;
+let currentScreen = 'home';
+let prevScreen = null;
+let currentCargaId = null;
+let currentMotoristaId = null;
+let currentClienteIdx = null;
+let cargaFiltro = 'ativas';
+let transpFiltro = 'transp';
+let cteFiltro = 'pendente';
+let pendingAction = null; // para ações que precisam de contexto
+
+// ─── HELPERS ────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const fmtData = ts => {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('pt-BR');
+};
+const fmtMoeda = v => v ? 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2}) : 'R$ 0,00';
+const fmtKg = v => v ? Number(v).toLocaleString('pt-BR') + ' kg' : '—';
+const initials = name => name ? name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase() : '?';
+const avatarColor = name => {
+  const colors = ['#6c3bfc','#3b82f6','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6'];
+  if (!name) return colors[0];
+  return colors[name.charCodeAt(0) % colors.length];
+};
+
+function statusPill(status) {
+  const map = {
+    'provisoria':'<span class="pill pprov">📋 Provisória</span>',
+    'planejada':'<span class="pill pb">Planejada</span>',
+    'em_transito':'<span class="pill pg">🚛 Em trânsito</span>',
+    'concluida':'<span class="pill pz">✅ Concluída</span>',
+    'pendente':'<span class="pill pa">⏳ Pendente</span>',
+    'emitido':'<span class="pill pg">✓ Emitido</span>',
+    'divergencia':'<span class="pill pp">⚠️ Divergência</span>',
+    'recebido':'<span class="pill pb">📥 Recebido</span>',
+    'entregue':'<span class="pill pg">✓ Entregue</span>',
+    'aguardando':'<span class="pill pz">Aguardando</span>',
+    'atrasado':'<span class="pill pr">Atrasado</span>',
+    'ativo':'<span class="pill pg">Ativo</span>',
+    'bloqueado':'<span class="pill pr">Bloqueado</span>',
+    'aprovado':'<span class="pill pg">Aprovado</span>',
+    'pendente_aprovacao':'<span class="pill pa">Aguardando aprovação</span>',
+  };
+  return map[status] || `<span class="pill pz">${status}</span>`;
+}
+
+// ─── AUTENTICAÇÃO SIMPLES (por e-mail) ──────────────────
+window.doLogin = async function() {
+  const email = $('loginEmail').value.trim().toLowerCase();
+  if (!email) { showErr('loginErr','Informe seu e-mail.'); return; }
+  try {
+    const q = query(collection(db,'usuarios'), where('email','==',email));
+    const snap = await getDocs(q);
+    if (snap.empty) { showErr('loginErr','E-mail não encontrado. Solicite acesso ao gestor.'); return; }
+    const userDoc = snap.docs[0];
+    const userData = userDoc.data();
+    if (userData.status === 'pendente_aprovacao') { showErr('loginErr','Sua solicitação ainda aguarda aprovação do gestor.'); return; }
+    if (userData.status === 'rejeitado') { showErr('loginErr','Seu acesso foi negado. Entre em contato com o gestor.'); return; }
+    // Verifica se é primeiro acesso (convidado sem dados completos)
+    if (userData.primeiroAcesso) {
+      currentUser = { id: userDoc.id, ...userData };
+      $('paErr').style.display = 'none';
+      showScreen('authPrimeiroAcesso');
+      return;
+    }
+    currentUser = { id: userDoc.id, ...userData };
+    localStorage.setItem('dya_user_id', userDoc.id);
+    initApp();
+  } catch(e) { showErr('loginErr','Erro ao conectar. Verifique sua internet.'); }
+};
+
+window.doCadastro = async function() {
+  const nome = $('cadNome').value.trim();
+  const apelido = $('cadApelido').value.trim();
+  const email = $('cadEmail').value.trim().toLowerCase();
+  const tel = $('cadTel').value.trim();
+  const cargo = $('cadCargo').value.trim();
+  const cidade = $('cadCidade').value.trim();
+  const perfil = $('cadPerfil').value;
+  if (!nome||!email||!tel||!perfil) { showErr('cadErr','Preencha todos os campos obrigatórios.'); return; }
+  // Verifica se e-mail já existe
+  const q = query(collection(db,'usuarios'), where('email','==',email));
+  const snap = await getDocs(q);
+  if (!snap.empty) { showErr('cadErr','Este e-mail já está cadastrado.'); return; }
+  await addDoc(collection(db,'usuarios'), {
+    nome, apelido, email, telefone:tel, cargo, cidade,
+    perfil, status:'pendente_aprovacao',
+    primeiroAcesso: false,
+    criadoEm: serverTimestamp()
+  });
+  $('cadErr').style.display='none';
+  $('cadOk').style.display='block';
+  $('cadOk').textContent='Solicitação enviada! Aguarde aprovação do gestor.';
+  ['cadNome','cadApelido','cadEmail','cadTel','cadCargo','cadCidade'].forEach(id => $(id).value='');
+};
+
+window.doPrimeiroAcesso = async function() {
+  const nome = $('paNome').value.trim();
+  const apelido = $('paApelido').value.trim();
+  const tel = $('paTel').value.trim();
+  const cargo = $('paCargo').value.trim();
+  const cidade = $('paCidade').value.trim();
+  if (!nome||!tel||!cargo) { showErr('paErr','Nome, telefone e cargo são obrigatórios.'); return; }
+  await updateDoc(doc(db,'usuarios',currentUser.id), {
+    nome, apelido, telefone:tel, cargo, cidade,
+    primeiroAcesso: false,
+    atualizadoEm: serverTimestamp()
+  });
+  currentUser = { ...currentUser, nome, apelido, telefone:tel, cargo, cidade, primeiroAcesso:false };
+  localStorage.setItem('dya_user_id', currentUser.id);
+  initApp();
+};
+
+function showErr(id, msg) {
+  const el = $(id);
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+// ─── INICIALIZAÇÃO DO APP ────────────────────────────────
+async function initApp() {
+  hideAllAuth();
+  $('appMain').classList.add('on');
+  // Avatar do usuário
+  const av = $('userAv');
+  av.textContent = initials(currentUser.nome||currentUser.email);
+  av.style.background = avatarColor(currentUser.nome);
+  av.style.color = '#fff';
+  // Ocultar nav de usuários se não for gestor
+  if (currentUser.perfil !== 'gestor') {
+    $('ni-usuarios').style.display = 'none';
+  } else {
+    $('ni-aprovacoes').style.display = 'flex';
+  }
+  goTo('home');
+  setTimeout(() => { $('splash').classList.add('hide'); }, 300);
+}
+
+function hideAllAuth() {
+  ['authLogin','authCadastro','authPrimeiroAcesso'].forEach(id => {
+    $(id).classList.remove('on');
+  });
+}
+
+// ─── NAVEGAÇÃO ───────────────────────────────────────────
+const screenMap = {
+  home:'scrHome', cargas:'scrCargas', cargaDet:'scrCargaDet',
+  motoristas:'scrMotoristas', motosDet:'scrMotoristaDet',
+  transportadoras:'scrTransportadoras', aprovacoes:'scrAprovacoes', ctes:'scrCtes',
+  recibos:'scrRecibos', pesquisas:'scrPesquisas',
+  dashboard:'scrDashboard', usuarios:'scrUsuarios'
+};
+
+const titleMap = {
+  home:'Início', cargas:'Cargas', cargaDet:'Detalhes da Carga',
+  motoristas:'Motoristas', motosDet:'Motorista',
+  transportadoras:'Transportadoras', aprovacoes:'Aprovações', ctes:'CTEs',
+  recibos:'Recibos', pesquisas:'Pesquisas',
+  dashboard:'Dashboard', usuarios:'Usuários'
+};
+
+const navMap = { home:'ni-home', cargas:'ni-cargas', motoristas:'ni-motoristas', transportadoras:'ni-transportadoras', aprovacoes:'ni-aprovacoes', ctes:'ni-ctes', dashboard:'ni-dashboard', usuarios:'ni-usuarios' };
+
+window.goTo = function(screen) {
+  prevScreen = currentScreen;
+  currentScreen = screen;
+  Object.values(screenMap).forEach(id => { const el=$(id); if(el) el.classList.remove('on'); });
+  const scr = screenMap[screen];
+  if (scr) $(scr).classList.add('on');
+  $('hdrTitle').textContent = titleMap[screen] || screen;
+  // Back button
+  const backScreens = ['cargaDet','motosDet'];
+  $('bkBtn').classList.toggle('on', backScreens.includes(screen));
+  // Nav highlight
+  Object.entries(navMap).forEach(([k,v]) => { $(v).classList.toggle('on', k===screen); });
+  // FAB
+  const fabScreens = ['cargas','motoristas','transportadoras','usuarios'];
+  $('fabBtn').style.display = fabScreens.includes(screen) ? 'flex' : 'none';
+  // Load
+  if (screen==='home') loadHome();
+  if (screen==='cargas') loadCargas();
+  if (screen==='motoristas') loadMotoristas();
+  if (screen==='transportadoras') loadTransportadoras();
+  if (screen==='aprovacoes') loadAprovacoes();
+  if (screen==='ctes') loadCtes();
+  if (screen==='recibos') loadRecibos();
+  if (screen==='pesquisas') loadPesquisas();
+  if (screen==='dashboard') loadDashboard();
+  if (screen==='usuarios') loadUsuarios();
+};
+
+window.goBack = function() { if (prevScreen) goTo(prevScreen); else goTo('home'); };
+
+window.showScreen = function(id) {
+  ['authLogin','authCadastro','authPrimeiroAcesso'].forEach(s => $(s).classList.remove('on'));
+  $(id).classList.add('on');
+}
+
+// ─── FAB ─────────────────────────────────────────────────
+window.openFab = function() {
+  if (currentScreen==='cargas') openModal('modalNovaCarga');
+  if (currentScreen==='motoristas') { loadTranspSelectModal('mtTransp'); openModal('modalNovoMotorista'); }
+  if (currentScreen==='transportadoras') { loadTranspSelectModal('trRefTransp'); openModal('modalNovaTransp'); }
+  if (currentScreen==='usuarios') {
+    if (currentUser.perfil!=='gestor') { alert('Apenas o gestor pode convidar usuários.'); return; }
+    openModal('modalConvidarUser');
+  }
+};
+
+window.openModal = function(id) {
+  $(id).classList.add('on');
+  // Preencher data de hoje
+  const today = new Date().toISOString().split('T')[0];
+  const ncData = $('ncData'); if(ncData && id==='modalNovaCarga') ncData.value = today;
+  const ciHora = $('ciHora'); if(ciHora && id==='modalCheckin') { const now = new Date(); ciHora.value = now.toISOString().slice(0,16); }
+  // Carregar selects de transportadora e motorista
+  if (id==='modalNovaCarga') { loadTranspSelectModal('ncTransp'); loadMotoristaSelectModal('ncMotorista'); }
+};
+
+window.closeModal = function(id) { $(id).classList.remove('on'); };
+
+// ─── LOAD SELECT HELPERS ─────────────────────────────────
+async function loadTranspSelectModal(selectId) {
+  const sel = $(selectId); if(!sel) return;
+  const snap = await getDocs(query(collection(db,'transportadoras'), where('tipo','==','transportadora')));
+  sel.innerHTML = '<option value="">Selecione...</option>';
+  snap.forEach(d => { sel.innerHTML += `<option value="${d.id}">${d.data().apelido||d.data().nome}</option>`; });
+}
+
+async function loadMotoristaSelectModal(selectId) {
+  const sel = $(selectId); if(!sel) return;
+  const snap = await getDocs(query(collection(db,'motoristas'), where('status','==','ativo')));
+  sel.innerHTML = '<option value="">Selecione...</option>';
+  snap.forEach(d => { sel.innerHTML += `<option value="${d.id}">${d.data().nome}</option>`; });
+}
+
+window.toggleQuarta = function() {
+  const isQuarta = $('trTipo').value === 'quarta';
+  $('trTranspRef').style.display = isQuarta ? 'flex' : 'none';
+};
+
+// ─── HOME ────────────────────────────────────────────────
+async function loadHome() {
+  // KPIs
+  const [cargasSnap, motSnap, cteSnap] = await Promise.all([
+    getDocs(collection(db,'cargas')),
+    getDocs(query(collection(db,'motoristas'), where('status','==','ativo'))),
+    getDocs(query(collection(db,'ctes'), where('status','in',['pendente','divergencia'])))
+  ]);
+  const cargas = cargasSnap.docs.map(d=>({id:d.id,...d.data()}));
+  const ativas = cargas.filter(c=>c.status==='em_transito'||c.status==='planejada').length;
+  const provs = cargas.filter(c=>c.status==='provisoria').length;
+  let totalKg = 0, totalFrete = 0;
+  cargas.filter(c=>c.status!=='provisoria').forEach(c=>{ totalKg+=Number(c.pesoLiq||0); totalFrete+=Number(c.valorFrete||0); });
+  $('kpiGrid').innerHTML = `
+    <div class="kpi"><div class="kpi-v">${ativas}</div><div class="kpi-l">Cargas ativas</div></div>
+    <div class="kpi"><div class="kpi-v">${provs}</div><div class="kpi-l">Provisórias</div></div>
+    <div class="kpi"><div class="kpi-v">${motSnap.size}</div><div class="kpi-l">Motoristas ativos</div></div>
+    <div class="kpi"><div class="kpi-v">${cteSnap.size}</div><div class="kpi-l">CTEs pendentes</div></div>
+  `;
+  // Badge CTE
+  if (cteSnap.size > 0) { $('badgeCte').style.display='flex'; $('badgeCte').textContent=cteSnap.size; }
+  // Banner pending users
+  if (currentUser.perfil==='gestor') {
+    const pendSnap = await getDocs(query(collection(db,'usuarios'), where('status','==','pendente_aprovacao')));
+    // Badge de aprovações pendentes
+    const aprovSnap = await getDocs(query(collection(db,'aprovacoes'), where('status','==','pendente')));
+    if (aprovSnap.size > 0) {
+      $('badgeAprov').style.display='flex'; $('badgeAprov').textContent=aprovSnap.size;
+    }
+    if (pendSnap.size > 0) {
+      $('pendingBanner').innerHTML = `<div class="notice" onclick="goTo('usuarios')"><span style="font-size:18px;">👥</span><div class="notice-text"><strong>${pendSnap.size} solicitação(ões) de acesso</strong> aguardando aprovação.</div><span style="color:var(--amber);">Ver →</span></div>`;
+      $('badgeUser').style.display='flex'; $('badgeUser').textContent=pendSnap.size;
+    }
+  }
+  // Cargas recentes
+  const recentes = cargas.filter(c=>c.status!=='concluida').slice(0,3);
+  if (recentes.length===0) { $('homeCargasRecentes').innerHTML='<div style="padding:12px 0;color:var(--muted);font-size:13px;">Nenhuma carga ativa.</div>'; return; }
+  $('homeCargasRecentes').innerHTML = recentes.map(c=>`
+    <div class="li" onclick="abrirCarga('${c.id}')">
+      <div class="av" style="background:${c.status==='provisoria'?'rgba(245,158,11,.15)':'rgba(108,59,252,.15)'};">${c.status==='provisoria'?'📋':'🚛'}</div>
+      <div class="li-body"><div class="li-title">${c.embarque||'—'}</div><div class="li-sub">${c.rota||'—'} · ${fmtData(c.dataSaida)}</div></div>
+      <div class="li-right">${statusPill(c.status)}</div>
+    </div>`).join('');
+}
+
+// ─── CARGAS ──────────────────────────────────────────────
+window.filtrarCargas = function(f) {
+  cargaFiltro = f;
+  ['tabAtivas','tabProv','tabConcluidas','tabTodas'].forEach(id => $(id).classList.remove('on'));
+  const map = {ativas:'tabAtivas',provisorias:'tabProv',concluidas:'tabConcluidas',todas:'tabTodas'};
+  if (map[f]) $(map[f]).classList.add('on');
+  loadCargas();
+};
+
+async function loadCargas() {
+  $('cargasList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  const snap = await getDocs(query(collection(db,'cargas'), orderBy('criadoEm','desc')));
+  let cargas = snap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>!c.arquivado);
+  if (cargaFiltro==='ativas') cargas = cargas.filter(c=>['planejada','em_transito'].includes(c.status));
+  if (cargaFiltro==='provisorias') cargas = cargas.filter(c=>c.status==='provisoria');
+  if (cargaFiltro==='concluidas') cargas = cargas.filter(c=>c.status==='concluida');
+  if (cargas.length===0) { $('cargasList').innerHTML='<div class="empty"><div class="empty-i">🚛</div><div class="empty-t">Nenhuma carga</div><div class="empty-s">Toque no + para criar</div></div>'; return; }
+  $('cargasList').innerHTML = cargas.map(c=>`
+    <div class="li" onclick="abrirCarga('${c.id}')">
+      <div class="av" style="background:${c.status==='provisoria'?'rgba(245,158,11,.15)':'rgba(108,59,252,.15)'};">${c.status==='provisoria'?'📋':'🚛'}</div>
+      <div class="li-body">
+        <div class="li-title">${c.embarque||'—'}</div>
+        <div class="li-sub">${c.rota||'—'} · ${c.frete||''} · ${fmtKg(c.pesoLiq)}</div>
+      </div>
+      <div class="li-right">${statusPill(c.status)}<div style="font-size:11px;color:var(--muted);">${fmtData(c.dataSaida)}</div></div>
+    </div>`).join('');
+}
+
+window.abrirCarga = async function(id) {
+  currentCargaId = id;
+  $('cargaDetContent').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  goTo('cargaDet');
+  const d = await getDoc(doc(db,'cargas',id));
+  const c = {id:d.id,...d.data()};
+  // Transportadora e motorista
+  var _tdSnap = c.transportadoraId ? (await getDoc(doc(db,'transportadoras',c.transportadoraId))).data() : null; let transpNome = _tdSnap ? (_tdSnap.apelido || '—') : '—';
+  var _mnSnap = c.motoristaId ? (await getDoc(doc(db,'motoristas',c.motoristaId))).data() : null; let motNome = _mnSnap ? (_mnSnap.nome || '—') : '—';
+  const isGestor = currentUser.perfil==='gestor';
+  const isOp = ['gestor','operacional'].includes(currentUser.perfil);
+  const isProv = c.status === 'provisoria';
+
+  let provBanner = '';
+  if (isProv) {
+    provBanner = `<div class="prov-banner">
+      <div><div class="prov-badge">PROVISÓRIA</div></div>
+      <div class="prov-text">Carga criada antes da emissão das NFs. Quando as notas forem emitidas, toque em <strong>"Converter para Ativa"</strong> para iniciar o ciclo logístico.</div>
+    </div>`;
+  }
+
+  let actions = '';
+  if (isProv && isOp) actions += `<button class="btn-sm btn-green" onclick="openConverterProv('${id}')">✅ Converter para Ativa</button>`;
+  if (c.status==='planejada' && isOp) actions += `<button class="btn-sm btn-blue" onclick="abrirCheckin('${id}')">🚛 Check-in de saída</button>`;
+  if (c.status==='em_transito' && isOp) actions += `<button class="btn-sm btn-purple" onclick="encerrarCarga('${id}')">🏁 Encerrar carga</button>`;
+  if (c.status==='em_transito') actions += `<button class="btn-sm btn-wa" onclick="waRomaneio('${id}')">📋 Romaneio WA</button>`;
+  if (c.status==='em_transito') actions += `<button class="btn-sm btn-wa" onclick="waBemVindo('${id}')">🤝 Boas-vindas WA</button>`;
+
+  // Clientes
+  const clSnap = await getDocs(collection(db,'cargas',id,'clientes'));
+  const clientes = clSnap.docs.map(d=>({id:d.id,...d.data()}));
+  let clientesHTML = '';
+  if (clientes.length===0) {
+    clientesHTML = '<div style="padding:12px;color:var(--muted);font-size:13px;">Nenhum cliente adicionado.</div>';
+  } else {
+    clientesHTML = clientes.map(cl=>{
+      const clActs = isOp ? `
+        ${cl.status!=='entregue' ? `<button class="btn-sm btn-green" onclick="marcarEntregue('${id}','${cl.id}')">✓ Entregue</button>` : ''}
+        ${cl.status!=='entregue' ? `<button class="btn-sm btn-red" onclick="abrirSinistro('${id}','${cl.id}')">⚠️ Sinistro</button>` : ''}
+        ${cl.status==='entregue' ? `<button class="btn-sm btn-amber" onclick="abrirRecibo('${id}','${cl.id}','${cl.nome}')">🧾 Recibo</button>` : ''}
+        ${cl.status==='entregue' ? `<button class="btn-sm btn-purple" onclick="abrirPesquisa('${id}','${cl.id}','${cl.nome}')">⭐ Pesquisa</button>` : ''}
+        <button class="btn-sm btn-wa" onclick="waCliente('${id}','${cl.id}')">📱 WA</button>
+      ` : '';
+      return `<div class="cl-row">
+        <div class="cl-head">
+          <div><div class="cl-name">${cl.nome}</div><div class="cl-loc">${cl.cidade||'—'}</div></div>
+          ${statusPill(cl.status||'aguardando')}
+        </div>
+        <div class="row"><span class="row-k">Peso líq.</span><span class="row-v">${fmtKg(cl.pesoLiq)}</span></div>
+        <div class="row"><span class="row-k">Valor NF</span><span class="row-v">${fmtMoeda(cl.valorNF)}</span></div>
+        <div class="row"><span class="row-k">Previsão</span><span class="row-v">${fmtData(cl.previsao)}</span></div>
+        ${cl.agendNum ? `<div class="row"><span class="row-k">Agend.</span><span class="row-v">${cl.agendNum} · ${cl.agendData||''}</span></div>` : ''}
+        ${cl.obs ? `<div class="row"><span class="row-k">Obs.</span><span class="row-v">${cl.obs}</span></div>` : ''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">${clActs}</div>
+      </div>`;
+    }).join('');
+  }
+
+  $('cargaDetContent').innerHTML = `
+    ${provBanner}
+    <div class="det-hdr">
+      <div class="det-title">${c.embarque||'Carga'}</div>
+      <div class="det-sub">${c.rota||'—'} · ${statusPill(c.status)}</div>
+    </div>
+    <div class="det-acts">${actions}</div>
+    <div class="sec">
+      <div class="sec-t">Dados da carga</div>
+      <div class="row"><span class="row-k">Transportadora</span><span class="row-v">${transpNome}</span></div>
+      <div class="row"><span class="row-k">Motorista</span><span class="row-v">${motNome}</span></div>
+      <div class="row"><span class="row-k">Tipo</span><span class="row-v">${c.tipoCarga||'—'}</span></div>
+      <div class="row"><span class="row-k">Frete</span><span class="row-v">${c.frete||'—'} · ${fmtMoeda(c.valorFrete)}</span></div>
+      <div class="row"><span class="row-k">Peso líquido</span><span class="row-v">${fmtKg(c.pesoLiq)}</span></div>
+      <div class="row"><span class="row-k">Peso bruto</span><span class="row-v">${fmtKg(c.pesoBruto)}</span></div>
+      <div class="row"><span class="row-k">Data saída</span><span class="row-v">${fmtData(c.dataSaida)}</span></div>
+      ${c.obs ? `<div class="row"><span class="row-k">Obs.</span><span class="row-v">${c.obs}</span></div>` : ''}
+    </div>
+    <div class="sec">
+      <div class="sec-t" style="display:flex;justify-content:space-between;align-items:center;">
+        Clientes (${clientes.length})
+        ${isOp ? `<button class="btn-sm btn-purple" onclick="abrirNovoCliente('${id}')">+ Cliente</button>` : ''}
+      </div>
+      ${clientesHTML}
+    </div>`;
+};
+
+window.toggleNcInfo = function() {
+  const isProv = document.getElementById('ncTipo').value === 'provisoria';
+  document.getElementById('ncProvInfo').style.display = isProv ? 'block' : 'none';
+};
+
+window.salvarNovaCarga = async function() {
+  const tipo = $('ncTipo').value;
+  const embarque = $('ncEmbarque').value.trim();
+  const rota = $('ncRota').value.trim();
+  const data = $('ncData').value;
+  if (!embarque||!rota) { alert('Preencha embarque e rota.'); return; }
+  const status = tipo === 'provisoria' ? 'provisoria' : 'planejada';
+  await addDoc(collection(db,'cargas'), {
+    embarque, rota, status,
+    tipoCarga: $('ncTipoCarga').value,
+    frete: $('ncFrete').value,
+    contratante: $('ncContratante').value,
+    transportadoraId: $('ncTransp').value||null,
+    motoristaId: $('ncMotorista').value||null,
+    valorFrete: Number($('ncValorFrete').value)||0,
+    obs: $('ncObs').value.trim(),
+    dataSaida: data ? Timestamp.fromDate(new Date(data+'T12:00:00')) : null,
+    criadoEm: serverTimestamp(),
+    criadoPor: currentUser.id
+  });
+  closeModal('modalNovaCarga');
+  ['ncEmbarque','ncRota','ncValorFrete','ncObs'].forEach(id=>$(id).value='');
+  loadCargas();
+};
+
+// ─── BUSCA DE CLIENTE NA BASE ──────────────────────────────────────────
+window.buscarCliente = async function() {
+  const q = $('clBusca').value.trim().toLowerCase();
+  const res = $('clSearchResults');
+  if (q.length < 2) { res.style.display='none'; return; }
+  const snap = await getDocs(collection(db,'clientes_base'));
+  const clientes = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const filtrados = clientes.filter(c =>
+    (c.nome||'').toLowerCase().includes(q) ||
+    (c.cnpj||'').replace(/\D/g,'').includes(q.replace(/\D/g,''))
+  ).slice(0,6);
+  if (filtrados.length===0) { res.style.display='none'; return; }
+  res.style.display='block';
+  res.innerHTML = filtrados.map(c=>`
+    <div class="cl-search-item" onclick="selecionarCliente('${c.id}','${c.nome}','${c.cnpj||''}','${c.cidade||''}','${c.uf||''}','${c.regiao||''}')">
+      <div class="cl-search-nome">${c.nome}</div>
+      <div class="cl-search-cnpj">${c.cnpj||'—'} · ${c.cidade||'—'}/${c.uf||'—'}</div>
+    </div>`).join('');
+};
+
+window.selecionarCliente = function(id, nome, cnpj, cidade, uf, regiao) {
+  $('clNome').value = nome;
+  $('clCNPJ').value = cnpj;
+  $('clCidade').value = cidade;
+  $('clUF').value = uf;
+  $('clRegiao').value = regiao;
+  $('clBusca').value = nome;
+  $('clSearchResults').style.display='none';
+  calcPrecoMedio();
+};
+
+window.calcPrecoMedio = function() {
+  const peso = Number($('clPesoLiq').value)||0;
+  const valor = Number($('clValorNF').value)||0;
+  $('clPrecoMedio').textContent = peso>0 ? 'R$ '+(valor/peso).toFixed(2)+'/kg' : '—';
+};
+
+window.abrirNovoCliente = function(cargaId) {
+  currentCargaId = cargaId;
+  $('clEditId').value = '';
+  $('modalClienteTitle').innerHTML = 'Adicionar Cliente <button class="modal-close" onclick="closeModal(\'modalNovoCliente\')">×</button>';
+  ['clBusca','clNome','clCNPJ','clCidade','clAgendNum','clObs'].forEach(id=>$(id).value='');
+  ['clUF','clRegiao'].forEach(id=>$(id).value='');
+  ['clPesoLiq','clValorNF'].forEach(id=>$(id).value='');
+  $('clPrecoMedio').textContent='—';
+  $('clSearchResults').style.display='none';
+  const today = new Date().toISOString().split('T')[0];
+  $('clPrevisao').value = today;
+  openModal('modalNovoCliente');
+};
+
+window.salvarNovoCliente = async function() {
+  const nome = $('clNome').value.trim();
+  const cnpj = $('clCNPJ').value.trim();
+  const cidade = $('clCidade').value.trim();
+  const uf = $('clUF').value;
+  const regiao = $('clRegiao').value;
+  const pesoLiq = Number($('clPesoLiq').value)||0;
+  const valorNF = Number($('clValorNF').value)||0;
+  if (!nome) { alert('Informe a Razão Social.'); return; }
+  const editId = $('clEditId').value;
+
+  // Salvar/atualizar na base de clientes
+  if (cnpj) {
+    const q = query(collection(db,'clientes_base'), where('cnpj','==',cnpj));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      await addDoc(collection(db,'clientes_base'), { nome, cnpj, cidade, uf, regiao, criadoEm: serverTimestamp() });
+    }
+  }
+
+  const precoMedio = pesoLiq>0 ? valorNF/pesoLiq : 0;
+  const dadosCliente = {
+    nome, cnpj, cidade, uf, regiao, pesoLiq, valorNF, precoMedio,
+    previsao: $('clPrevisao').value ? Timestamp.fromDate(new Date($('clPrevisao').value+'T12:00:00')) : null,
+    agendNum: $('clAgendNum').value.trim(),
+    agendData: $('clAgendData').value||null,
+    obs: $('clObs').value.trim(),
+    status: 'aguardando'
+  };
+
+  if (editId) {
+    await updateDoc(doc(db,'cargas',currentCargaId,'clientes',editId), dadosCliente);
+  } else {
+    // Pegar próxima posição
+    const clSnap = await getDocs(collection(db,'cargas',currentCargaId,'clientes'));
+    dadosCliente.posicao = clSnap.size + 1;
+    dadosCliente.criadoEm = serverTimestamp();
+    await addDoc(collection(db,'cargas',currentCargaId,'clientes'), dadosCliente);
+  }
+
+  closeModal('modalNovoCliente');
+  abrirCarga(currentCargaId);
+};
+
+// ─── ROMANEIO DE EMBARQUE ──────────────────────────────────────────────
+window.gerarRomaneio = async function(cargaId) {
+  const d = await getDoc(doc(db,'cargas',cargaId));
+  const c = {id:d.id,...d.data()};
+  var _tdSnap = c.transportadoraId ? (await getDoc(doc(db,'transportadoras',c.transportadoraId))).data() : null; let transpNome = _tdSnap ? (_tdSnap.apelido || '—') : '—';
+  let motData = c.motoristaId ? (await getDoc(doc(db,'motoristas',c.motoristaId))).data() : null;
+  const motNome = (motData && motData.nome) || '—';
+  const motCPF = (motData && motData.cpf) || '—';
+  const motPlacaC = (motData && motData.placacavalo) || '—';
+  const motPlacaR = (motData && motData.placarreta) || '—';
+  const motTel = (motData && motData.telefone) || '—';
+  const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
+  const clientes = clSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.posicao||99)-(b.posicao||99));
+  const totalKg = clientes.reduce((s,cl)=>s+Number(cl.pesoLiq||0),0);
+  const totalFrete = Number(c.valorFrete||0);
+
+  // Ordem de entrega
+  const rowsEntrega = clientes.map((cl,i)=>{
+    const rpkg = totalKg>0 ? (totalFrete/totalKg) : 0;
+    const sub = rpkg * Number(cl.pesoLiq||0);
+    return `<tr>
+      <td style="text-align:center;font-weight:700;">${i+1}</td>
+      <td>${cl.nome}</td>
+      <td>${cl.cidade||'—'}/${cl.uf||'—'}${cl.agendNum?'<br><small>Agend: '+cl.agendNum+'</small>':''}</td>
+      <td style="text-align:right;">${Number(cl.pesoLiq||0).toLocaleString('pt-BR')}</td>
+      <td style="text-align:right;">R$ ${rpkg.toFixed(4)}</td>
+      <td style="text-align:right;">R$ ${sub.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+    </tr>`;
+  }).join('');
+
+  // Ordem de carregamento = inverso
+  const rowsCarreg = [...clientes].reverse().map((cl,i)=>`<tr>
+    <td style="text-align:center;font-weight:700;">${i+1}</td>
+    <td>${cl.nome}</td>
+    <td>${cl.cidade||'—'}/${cl.uf||'—'}</td>
+    <td style="text-align:right;">${Number(cl.pesoLiq||0).toLocaleString('pt-BR')}</td>
+  </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,sans-serif;padding:32px;color:#1a1a2e;font-size:13px;}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:3px solid #0f3460;margin-bottom:20px;}
+    .header-left h1{font-size:22px;font-weight:900;color:#0f3460;}
+    .header-left p{font-size:11px;color:#9ca3af;margin-top:3px;}
+    .badge{background:linear-gradient(135deg,#6c3bfc,#3b82f6);color:white;padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+    .block{background:#f8f9ff;border:1px solid #e8eaf6;border-radius:8px;padding:12px;}
+    .block-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;margin-bottom:8px;}
+    .row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:.5px solid #f0f2f8;font-size:12px;}
+    .row:last-child{border-bottom:none;}
+    .rk{color:#9ca3af;} .rv{font-weight:600;}
+    table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+    th{background:#0f3460;color:white;padding:8px 10px;text-align:left;font-size:11px;}
+    td{padding:8px 10px;border-bottom:1px solid #f0f2f8;font-size:12px;}
+    tr:nth-child(even) td{background:#f8f9ff;}
+    .total-row td{background:#0f3460!important;color:white;font-weight:700;}
+    .section-title{font-size:14px;font-weight:700;color:#0f3460;margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid #e8eaf6;}
+    .footer{display:flex;justify-content:space-between;margin-top:32px;}
+    .sign{text-align:center;}
+    .sign-line{width:180px;border-top:1px solid #1a1a2e;margin:0 auto 6px;}
+    .sign-name{font-size:12px;font-weight:700;}
+    .sign-role{font-size:11px;color:#9ca3af;}
+    @media print{body{padding:16px;}}
+  </style></head><body>
+  <div class="header">
+    <div class="header-left">
+      <h1>ROMANEIO DE EMBARQUE</h1>
+      <p>Indústria Compescal · Bairro Alto da Cheia · Aracati-CE</p>
+    </div>
+    <div>
+      <div class="badge">Nº ${c.embarque}</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:6px;text-align:right;">${c.status==='provisoria'?'⚠️ PROVISÓRIO':'DEFINITIVO'}</div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="block">
+      <div class="block-title">Dados da carga</div>
+      <div class="row"><span class="rk">Rota</span><span class="rv">${c.rota||'—'}</span></div>
+      <div class="row"><span class="rk">Transportadora</span><span class="rv">${transpNome}</span></div>
+      <div class="row"><span class="rk">Tipo</span><span class="rv">${c.tipoCarga||'—'} · ${c.frete||'—'}</span></div>
+      <div class="row"><span class="rk">Data saída</span><span class="rv">${fmtData(c.dataSaida)}</span></div>
+      <div class="row"><span class="rk">Valor global frete</span><span class="rv">${fmtMoeda(c.valorFrete)}</span></div>
+      <div class="row"><span class="rk">Contratante</span><span class="rv">${c.contratante||'—'}</span></div>
+    </div>
+    <div class="block">
+      <div class="block-title">Motorista</div>
+      <div class="row"><span class="rk">Nome</span><span class="rv">${motNome}</span></div>
+      <div class="row"><span class="rk">CPF</span><span class="rv">${motCPF}</span></div>
+      <div class="row"><span class="rk">Placa cavalo</span><span class="rv">${motPlacaC}</span></div>
+      <div class="row"><span class="rk">Placa carreta</span><span class="rv">${motPlacaR}</span></div>
+      <div class="row"><span class="rk">Contato</span><span class="rv">${motTel}</span></div>
+    </div>
+  </div>
+  <div class="section-title">Ordem de Entrega</div>
+  <table>
+    <thead><tr><th>Pos.</th><th>Cliente</th><th>Local de Entrega</th><th>Peso Liq. (kg)</th><th>R$/kg</th><th>Sub-total</th></tr></thead>
+    <tbody>${rowsEntrega}</tbody>
+    <tr class="total-row"><td colspan="3">TOTAL</td><td>${totalKg.toLocaleString('pt-BR')} kg</td><td>—</td><td>${fmtMoeda(totalFrete)}</td></tr>
+  </table>
+  <div class="section-title">Ordem de Carregamento (inverso da entrega)</div>
+  <table>
+    <thead><tr><th>Pos.</th><th>Cliente</th><th>Local</th><th>Peso Liq. (kg)</th></tr></thead>
+    <tbody>${rowsCarreg}</tbody>
+  </table>
+  <div class="footer">
+    <div class="sign"><div class="sign-line"></div><div class="sign-name">${c.contratante||'Diego Chaves'}</div><div class="sign-role">Gerente de Logística</div></div>
+    <div style="font-size:11px;color:#9ca3af;text-align:right;">DYA Soluções · Maris Pescados<br>${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
+  </div>
+  
+  </body></html>`;
+
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(),600);
+};
+
+
+// ─── LANÇAMENTO DE NFe (CONVERTER PARA ATIVA) ──────────────────────────
+let nfesTemp = [];
+
+window.openConverterProv = async function(id) {
+  currentCargaId = id;
+  nfesTemp = [];
+  $('nfesLancadas').innerHTML = '';
+  $('btnAtivarCarga').style.display = 'none';
+  ['convNFe','convValorNFe','convPesoLiq','convPesoBruto','convObs'].forEach(i=>$(i).value='');
+  ['convPrecoMedio','convPctCarga','convRateio'].forEach(i=>$(i).textContent='—');
+  $('convDataFat').value = new Date().toISOString().split('T')[0];
+
+  // Carregar clientes no select
+  const clSnap = await getDocs(collection(db,'cargas',id,'clientes'));
+  const clientes = clSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.posicao||99)-(b.posicao||99));
+  const sel = $('convClienteSelect');
+  sel.innerHTML = '<option value="">Selecione o cliente...</option>';
+  clientes.forEach(cl=>{ sel.innerHTML += `<option value="${cl.id}" data-nome="${cl.nome}" data-peso="${cl.pesoLiq||0}">${cl.nome} (${fmtKg(cl.pesoLiq)})</option>`; });
+  sel.onchange = () => atualizarInfoCliente();
+  openModal('modalConverterProv');
+};
+
+function atualizarInfoCliente() {
+  const sel = $('convClienteSelect');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.value) { $('convClienteInfo').innerHTML=''; return; }
+  $('convClienteInfo').innerHTML = `<div style="font-size:12px;color:var(--muted);">Cliente: <strong style="color:var(--text);">${opt.dataset.nome}</strong> · Peso estimado: <strong>${fmtKg(opt.dataset.peso)}</strong></div>`;
+  calcConvPreco();
+}
+
+window.calcConvPreco = async function() {
+  const pesoLiq = Number($('convPesoLiq').value)||0;
+  const valor = Number($('convValorNFe').value)||0;
+  $('convPrecoMedio').textContent = pesoLiq>0 ? 'R$ '+(valor/pesoLiq).toFixed(2)+'/kg' : '—';
+
+  // Calcular % e rateio com base no total de kg já lançados + este
+  const d = await getDoc(doc(db,'cargas',currentCargaId));
+  const valorFrete = Number(d.data().valorFrete||0);
+  // Total kg da carga (soma dos clientes)
+  const clSnap = await getDocs(collection(db,'cargas',currentCargaId,'clientes'));
+  let totalKgCarga = 0;
+  clSnap.forEach(c=>{ totalKgCarga += Number(c.data().pesoLiq||0); });
+  if (totalKgCarga>0 && pesoLiq>0) {
+    const pct = pesoLiq/totalKgCarga;
+    const rateio = valorFrete * pct;
+    $('convPctCarga').textContent = (pct*100).toFixed(2)+'%';
+    $('convRateio').textContent = fmtMoeda(rateio);
+  }
+};
+
+window.salvarNFe = async function() {
+  const clienteId = $('convClienteSelect').value;
+  const nfe = $('convNFe').value.trim();
+  const valorNFe = Number($('convValorNFe').value)||0;
+  const pesoLiq = Number($('convPesoLiq').value)||0;
+  const pesoBruto = Number($('convPesoBruto').value)||0;
+  const dataFat = $('convDataFat').value;
+  if (!clienteId||!nfe) { alert('Selecione o cliente e informe o número da NFe.'); return; }
+
+  const sel = $('convClienteSelect');
+  const opt = sel.options[sel.selectedIndex];
+  const clienteNome = opt.dataset.nome;
+
+  // Calcular % e rateio
+  const cargaDoc = await getDoc(doc(db,'cargas',currentCargaId));
+  const valorFrete = Number(cargaDoc.data().valorFrete||0);
+  const clSnap = await getDocs(collection(db,'cargas',currentCargaId,'clientes'));
+  let totalKg = 0; clSnap.forEach(c=>{ totalKg += Number(c.data().pesoLiq||0); });
+  const pct = totalKg>0 ? pesoLiq/totalKg : 0;
+  const rateio = valorFrete * pct;
+  const precoMedio = pesoLiq>0 ? valorNFe/pesoLiq : 0;
+
+  // Buscar UF/Região do cliente
+  const clDoc = await getDoc(doc(db,'cargas',currentCargaId,'clientes',clienteId));
+  const clData = clDoc.data();
+
+  const nfeData = {
+    clienteId, clienteNome,
+    nfe, valorNFe, pesoLiq, pesoBruto,
+    uf: clData.uf||'—', regiao: clData.regiao||'—',
+    dataFaturamento: dataFat ? Timestamp.fromDate(new Date(dataFat+'T12:00:00')) : null,
+    pctCarga: pct, rateio, precoMedio,
+    obs: $('convObs').value.trim(),
+    cargaId: currentCargaId,
+    embarque: cargaDoc.data().embarque,
+    transportadoraId: cargaDoc.data().transportadoraId||null,
+    criadoEm: serverTimestamp()
+  };
+
+  // Salvar NFe
+  await addDoc(collection(db,'nfes'), nfeData);
+
+  // Adicionar ao array temp para exibição
+  nfesTemp.push({ nfe, clienteNome, valorNFe, pesoLiq, rateio });
+
+  // Atualizar exibição
+  $('nfesLancadas').innerHTML = `<div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;">NFes lançadas nesta sessão:</div>` +
+    nfesTemp.map(n=>`<div class="nfe-row" style="display:flex;justify-content:space-between;align-items:center;">
+      <div><span style="font-weight:600;color:var(--text);">NF ${n.nfe}</span> · ${n.clienteNome}</div>
+      <div style="text-align:right;font-size:11px;"><div>${fmtKg(n.pesoLiq)}</div><div style="color:var(--green);">${fmtMoeda(n.valorNFe)}</div></div>
+    </div>`).join('');
+
+  $('btnAtivarCarga').style.display = 'block';
+
+  // Limpar campos para próxima NFe
+  ['convNFe','convValorNFe','convPesoLiq','convPesoBruto','convObs'].forEach(i=>$(i).value='');
+  ['convPrecoMedio','convPctCarga','convRateio'].forEach(i=>$(i).textContent='—');
+  alert(`NFe ${nfe} lançada! Lance mais NFes ou clique "Ativar carga" para concluir.`);
+};
+
+window.confirmarAtivacao = async function() {
+  if (nfesTemp.length===0) { alert('Lance pelo menos uma NFe antes de ativar.'); return; }
+  if (!confirm(`Ativar carga com ${nfesTemp.length} NFe(s) lançada(s)?`)) return;
+  await updateDoc(doc(db,'cargas',currentCargaId), {
+    status: 'planejada',
+    ativadoEm: serverTimestamp(),
+    ativadoPor: currentUser.id
+  });
+  closeModal('modalConverterProv');
+  nfesTemp = [];
+  abrirCarga(currentCargaId);
+};
+
+// ─── DRAG & DROP PARA REORDENAR CLIENTES ──────────────────────────────
+let dragSrcId = null;
+
+function makeDraggable(el, clienteId) {
+  el.setAttribute('draggable','true');
+  el.dataset.cid = clienteId;
+  el.addEventListener('dragstart', e => {
+    dragSrcId = clienteId;
+    el.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  el.addEventListener('dragend', () => el.classList.remove('dragging'));
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+  el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+  el.addEventListener('drop', async e => {
+    e.preventDefault();
+    el.classList.remove('drag-over');
+    if (dragSrcId === clienteId) return;
+    // Reordenar posições no Firebase
+    const clSnap = await getDocs(collection(db,'cargas',currentCargaId,'clientes'));
+    const clientes = clSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.posicao||99)-(b.posicao||99));
+    const ids = clientes.map(c=>c.id);
+    const srcIdx = ids.indexOf(dragSrcId);
+    const dstIdx = ids.indexOf(clienteId);
+    ids.splice(srcIdx,1);
+    ids.splice(dstIdx,0,dragSrcId);
+    for (let i=0;i<ids.length;i++) {
+      await updateDoc(doc(db,'cargas',currentCargaId,'clientes',ids[i]),{posicao:i+1});
+    }
+    abrirCarga(currentCargaId);
+  });
+}
+
+// ─── DETALHE DA CARGA (ATUALIZADO) ────────────────────────────────────
+window.abrirCarga = async function(id) {
+  currentCargaId = id;
+  $('cargaDetContent').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  goTo('cargaDet');
+  const d = await getDoc(doc(db,'cargas',id));
+  const c = {id:d.id,...d.data()};
+  var _tdSnap = c.transportadoraId ? (await getDoc(doc(db,'transportadoras',c.transportadoraId))).data() : null; let transpNome = _tdSnap ? (_tdSnap.apelido || '—') : '—';
+  let motData = c.motoristaId ? (await getDoc(doc(db,'motoristas',c.motoristaId))).data() : null;
+  let motNome = (motData && motData.nome) || '—';
+  const isOp = ['gestor','operacional'].includes(currentUser.perfil);
+  const isProv = c.status === 'provisoria';
+
+  // Clientes ordenados por posição
+  const clSnap = await getDocs(collection(db,'cargas',id,'clientes'));
+  const clientes = clSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.posicao||99)-(b.posicao||99));
+
+  // NFes lançadas agrupadas por cliente
+  const nfesSnap = await getDocs(query(collection(db,'nfes'), where('cargaId','==',id)));
+  const nfesMap = {};
+  nfesSnap.forEach(n=>{ const nd=n.data(); if(!nfesMap[nd.clienteId]) nfesMap[nd.clienteId]=[]; nfesMap[nd.clienteId].push(nd); });
+
+  // Total geral
+  const totalKgClientes = clientes.reduce((s,cl)=>s+Number(cl.pesoLiq||0),0);
+  const valorFrete = Number(c.valorFrete||0);
+
+  let provBanner = '';
+  if (isProv) {
+    provBanner = `<div class="prov-banner">
+      <div><div class="prov-badge">PROVISÓRIA</div></div>
+      <div class="prov-text">Registre os clientes e gere o romaneio de embarque. Quando as NFs forem emitidas, toque em <strong>"Converter para Ativa"</strong>.</div>
+    </div>`;
+  }
+
+  let actions = '';
+  if (isProv && isOp) actions += `<button class="btn-sm btn-green" onclick="openConverterProv('${id}')">✅ Converter para Ativa</button>`;
+  if (isOp) actions += `<button class="btn-sm btn-blue" onclick="abrirEditarCarga('${id}')">✏️ Editar</button>`;
+  if (isOp) actions += `<button class="btn-sm btn-red" onclick="submeterArquivamento('carga','${id}','${(c.embarque||'').replace(/'/g,"\'")}')">🗄️ Arquivar</button>`;
+  if (isProv || c.status==='planejada'||c.status==='em_transito') actions += `<button class="btn-sm btn-blue" onclick="gerarRomaneio('${id}')">📋 Romaneio</button>`;
+  if (c.status==='planejada' && isOp) actions += `<button class="btn-sm btn-purple" onclick="abrirCheckin('${id}')">🚛 Check-in</button>`;
+  if (c.status==='em_transito' && isOp) actions += `<button class="btn-sm btn-red" onclick="encerrarCarga('${id}')">🏁 Encerrar</button>`;
+  if (c.status==='em_transito') actions += `<button class="btn-sm btn-wa" onclick="waBemVindo('${id}')">🤝 WA Boas-vindas</button>`;
+  if (c.status==='em_transito') actions += `<button class="btn-sm btn-wa" onclick="waRomaneio('${id}')">📱 WA Romaneio</button>`;
+
+  // Renderizar clientes
+  let clientesHTML = '';
+  if (clientes.length===0) {
+    clientesHTML = '<div style="padding:14px;color:var(--muted);font-size:13px;text-align:center;">Nenhum cliente. Toque em "+ Cliente" para adicionar.</div>';
+  } else {
+    clientesHTML = clientes.map((cl,idx)=>{
+      const rpkg = totalKgClientes>0 ? valorFrete/totalKgClientes : 0;
+      const rateio = rpkg * Number(cl.pesoLiq||0);
+      const pct = totalKgClientes>0 ? (Number(cl.pesoLiq||0)/totalKgClientes*100).toFixed(1) : 0;
+      const nfesCliente = nfesMap[cl.id]||[];
+
+      // NFes agrupadas
+      let nfesHTML = '';
+      if (nfesCliente.length>0) {
+        const totalNFPeso = nfesCliente.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
+        const totalNFValor = nfesCliente.reduce((s,n)=>s+Number(n.valorNFe||0),0);
+        nfesHTML = `<div style="margin-top:8px;">
+          <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">NFes lançadas (${nfesCliente.length})</div>
+          ${nfesCliente.map(n=>`<div class="nfe-row"><div style="display:flex;justify-content:space-between;"><span><span class="nfe-key">NF </span><span class="nfe-val">${n.nfe}</span></span><span class="nfe-key">${fmtData(n.dataFaturamento)}</span></div><div style="display:flex;justify-content:space-between;margin-top:3px;"><span class="nfe-key">${fmtKg(n.pesoLiq)} · ${fmtMoeda(n.valorNFe)}</span><span style="font-size:11px;color:var(--amber);">Rateio: ${fmtMoeda(n.rateio)}</span></div></div>`).join('')}
+          <div style="display:flex;justify-content:space-between;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:6px;margin-top:4px;font-size:12px;font-weight:600;">
+            <span style="color:var(--muted);">Total consolidado</span>
+            <span style="color:var(--text);">${fmtKg(totalNFPeso)} · ${fmtMoeda(totalNFValor)}</span>
+          </div>
+        </div>`;
+      }
+
+      const clActs = isOp ? `
+        ${cl.status!=='entregue'&&!isProv ? `<button class="btn-sm btn-green" onclick="marcarEntregue('${id}','${cl.id}')">✓ Entregue</button>` : ''}
+        ${cl.status!=='entregue'&&!isProv ? `<button class="btn-sm btn-red" onclick="abrirSinistro('${id}','${cl.id}')">⚠️ Sinistro</button>` : ''}
+        ${cl.status==='entregue' ? `<button class="btn-sm btn-amber" onclick="abrirRecibo('${id}','${cl.id}','${cl.nome}')">🧾 Recibo</button>` : ''}
+        ${cl.status==='entregue' ? `<button class="btn-sm btn-purple" onclick="abrirPesquisa('${id}','${cl.id}','${cl.nome}')">⭐ Pesquisa</button>` : ''}
+        <button class="btn-sm btn-blue" onclick="editarCliente('${id}','${cl.id}')">✏️ Editar</button>
+        <button class="btn-sm btn-wa" onclick="waCliente('${id}','${cl.id}')">📱 WA</button>
+      ` : '';
+
+      return `<div class="cl-drag" id="cl_${cl.id}">
+        <div class="cl-row-wrap">
+          <div class="cl-drag-handle" title="Arraste para reordenar">⠿</div>
+          <div class="cl-pos">${idx+1}</div>
+          <div style="flex:1;">
+            <div class="cl-head">
+              <div><div class="cl-name">${cl.nome}</div><div class="cl-loc">${cl.cidade||'—'}/${cl.uf||'—'} · ${cl.regiao||'—'}</div></div>
+              ${statusPill(cl.status||'aguardando')}
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
+              <div style="font-size:11px;"><span style="color:var(--muted);">Peso liq: </span><strong>${fmtKg(cl.pesoLiq)}</strong></div>
+              <div style="font-size:11px;"><span style="color:var(--muted);">Valor est.: </span><strong>${fmtMoeda(cl.valorNF||cl.valorNFe)}</strong></div>
+              <div style="font-size:11px;"><span style="color:var(--muted);">R$/kg: </span><strong>${cl.precoMedio?'R$ '+Number(cl.precoMedio).toFixed(2):'—'}</strong></div>
+              <div style="font-size:11px;"><span style="color:var(--muted);">% carga: </span><strong>${pct}%</strong></div>
+              <div style="font-size:11px;"><span style="color:var(--muted);">Rateio: </span><strong style="color:var(--amber);">${fmtMoeda(rateio)}</strong></div>
+            </div>
+            ${cl.previsao?`<div style="font-size:11px;margin-top:4px;color:var(--muted);">Previsão: ${fmtData(cl.previsao)}${cl.agendNum?' · Agend: '+cl.agendNum:''}</div>`:''}
+            ${cl.obs?`<div style="font-size:11px;color:var(--muted);margin-top:2px;">Obs: ${cl.obs}</div>`:''}
+            ${nfesHTML}
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${clActs}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Total resumo
+  const precoMedioGeral = totalKgClientes>0 ? (clientes.reduce((s,cl)=>s+Number(cl.valorNF||cl.valorNFe||0),0)/totalKgClientes).toFixed(2) : '—';
+
+  $('cargaDetContent').innerHTML = `
+    ${provBanner}
+    <div class="det-hdr">
+      <div class="det-title">${c.embarque||'Carga'}</div>
+      <div class="det-sub">${c.rota||'—'} · ${statusPill(c.status)}</div>
+    </div>
+    <div class="det-acts">${actions}</div>
+    <div class="sec">
+      <div class="sec-t">Dados da carga</div>
+      <div class="row"><span class="row-k">Transportadora</span><span class="row-v">${transpNome}</span></div>
+      <div class="row"><span class="row-k">Motorista</span><span class="row-v">${motNome}</span></div>
+      <div class="row"><span class="row-k">Contratante</span><span class="row-v">${c.contratante||'—'}</span></div>
+      <div class="row"><span class="row-k">Tipo · Frete</span><span class="row-v">${c.tipoCarga||'—'} · ${c.frete||'—'}</span></div>
+      <div class="row"><span class="row-k">Valor frete global</span><span class="row-v">${fmtMoeda(c.valorFrete)}</span></div>
+      <div class="row"><span class="row-k">Peso líq. total</span><span class="row-v">${fmtKg(totalKgClientes)}</span></div>
+      <div class="row"><span class="row-k">R$/kg médio</span><span class="row-v">R$ ${typeof precoMedioGeral==='string'?precoMedioGeral:precoMedioGeral+'/kg'}</span></div>
+      <div class="row"><span class="row-k">Data saída</span><span class="row-v">${fmtData(c.dataSaida)}</span></div>
+    </div>
+    <div class="sec">
+      <div class="sec-t" style="display:flex;justify-content:space-between;align-items:center;">
+        Clientes (${clientes.length}) · ${fmtKg(totalKgClientes)}
+        ${isOp ? `<button class="btn-sm btn-purple" onclick="abrirNovoCliente('${id}')">+ Cliente</button>` : ''}
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">⠿ Arraste para reordenar a sequência de entrega</div>
+      <div id="clientesDragArea">${clientesHTML}</div>
+    </div>`;
+
+  // Ativar drag & drop nos elementos renderizados
+  clientes.forEach(cl=>{
+    const el = document.getElementById('cl_'+cl.id);
+    if (el) makeDraggable(el, cl.id);
+  });
+};
+
+window.editarCliente = async function(cargaId, clienteId) {
+  currentCargaId = cargaId;
+  const d = await getDoc(doc(db,'cargas',cargaId,'clientes',clienteId));
+  const cl = d.data();
+  $('clEditId').value = clienteId;
+  $('clNome').value = cl.nome||'';
+  $('clCNPJ').value = cl.cnpj||'';
+  $('clCidade').value = cl.cidade||'';
+  $('clUF').value = cl.uf||'';
+  $('clRegiao').value = cl.regiao||'';
+  $('clPesoLiq').value = cl.pesoLiq||'';
+  $('clValorNF').value = cl.valorNF||cl.valorNFe||'';
+  $('clPrevisao').value = cl.previsao ? cl.previsao.toDate().toISOString().split('T')[0] : '';
+  $('clAgendNum').value = cl.agendNum||'';
+  $('clObs').value = cl.obs||'';
+  $('clPrecoMedio').textContent = cl.precoMedio ? 'R$ '+Number(cl.precoMedio).toFixed(2)+'/kg' : '—';
+  $('modalClienteTitle').innerHTML = 'Editar Cliente <button class="modal-close" onclick="closeModal(\'modalNovoCliente\')">×</button>';
+  $('clBusca').value = '';
+  $('clSearchResults').style.display='none';
+  openModal('modalNovoCliente');
+};
+
+// ─── MOTORISTAS ──────────────────────────────────────────
+async function loadMotoristas() {
+  $('motoristasList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  const snap = await getDocs(query(collection(db,'motoristas'), orderBy('nome')));
+  const mots = snap.docs.map(d=>({id:d.id,...d.data()}));
+  if (mots.length===0) { $('motoristasList').innerHTML='<div class="empty"><div class="empty-i">👤</div><div class="empty-t">Nenhum motorista</div><div class="empty-s">Toque no + para cadastrar</div></div>'; return; }
+  $('motoristasList').innerHTML = mots.map(m=>`
+    <div class="li" onclick="abrirMotorista('${m.id}')">
+      <div class="av" style="background:${avatarColor(m.nome)};color:#fff;">${initials(m.nome)}</div>
+      <div class="li-body">
+        <div class="li-title">${m.nome}</div>
+        <div class="li-sub">${m.placacavalo||'—'} · ${m.telefone||'—'}</div>
+      </div>
+      <div class="li-right">
+          ${m.arquivado?'<span class="pill pr">Arquivado</span>':statusPill(m.status||'ativo')}
+          <div style="font-size:11px;color:var(--muted);">★ ${m.mediaAvaliacao||'—'}</div>
+          ${m.arquivado && currentUser.perfil==='gestor'?`<button class="btn-sm btn-green" onclick="reativarRegistro('motorista','${m.id}')" style="font-size:10px;padding:3px 7px;">Reativar</button>`:''}
+        </div>
+    </div>`).join('');
+}
+
+window.abrirMotorista = async function(id) {
+  currentMotoristaId = id;
+  $('motoristaDetContent').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  goTo('motosDet');
+  const d = await getDoc(doc(db,'motoristas',id));
+  const m = {id:d.id,...d.data()};
+  var _tSnap = m.transportadoraId ? (await getDoc(doc(db,'transportadoras',m.transportadoraId))).data() : null; let transpNome = (_tSnap && _tSnap.apelido) ? _tSnap.apelido : '—';
+  const isGestor = currentUser.perfil==='gestor';
+  const av = m.avaliacoes||{};
+  $('hdrTitle').textContent = m.nome;
+  $('motoristaDetContent').innerHTML = `
+    <div class="det-hdr" style="text-align:center;">
+      <div class="av" style="width:64px;height:64px;font-size:22px;margin:0 auto 10px;background:${avatarColor(m.nome)};color:#fff;">${initials(m.nome)}</div>
+      <div class="det-title">${m.nome}</div>
+      <div class="det-sub">${statusPill(m.status||'ativo')} · ★ ${m.mediaAvaliacao||'Sem avaliação'}</div>
+    </div>
+    <div class="det-acts">
+      ${isGestor||currentUser.perfil==='operacional' ? `<button class="btn-sm btn-blue" onclick="abrirEditarMotorista('${id}')">✏️ Editar</button>` : ''}
+      ${isGestor ? `<button class="btn-sm btn-red" onclick="submeterArquivamento('motorista','${id}','${(m.nome||'').replace(/'/g,"\'")}')">🗄️ Arquivar</button>` : ''}
+      ${m.telefone ? `<button class="btn-sm btn-wa" onclick="window.open('https://wa.me/55${m.telefone.replace(/\D/g,'')}')">📱 WhatsApp</button>` : ''}
+      ${isGestor||currentUser.perfil==='operacional' ? `<button class="btn-sm btn-purple" onclick="openAvaliarMot('${id}')">⭐ Avaliar</button>` : ''}
+      ${isGestor && m.status==='ativo' ? `<button class="btn-sm btn-red" onclick="bloquearMot('${id}',true)">🔒 Bloquear</button>` : ''}
+      ${isGestor && m.status==='bloqueado' ? `<button class="btn-sm btn-green" onclick="bloquearMot('${id}',false)">🔓 Reativar</button>` : ''}
+    </div>
+    <div class="sec">
+      <div class="sec-t">Dados</div>
+      <div class="row"><span class="row-k">CPF</span><span class="row-v">${m.cpf||'—'}</span></div>
+      <div class="row"><span class="row-k">Telefone</span><span class="row-v">${m.telefone||'—'}</span></div>
+      <div class="row"><span class="row-k">Placa cavalo</span><span class="row-v">${m.placacavalo||'—'}</span></div>
+      <div class="row"><span class="row-k">Placa carreta</span><span class="row-v">${m.placarreta||'—'}</span></div>
+      <div class="row"><span class="row-k">Validade CNH</span><span class="row-v">${m.validadeCNH||'—'}</span></div>
+      <div class="row"><span class="row-k">Transportadora</span><span class="row-v">${transpNome}</span></div>
+    </div>
+    <div class="sec">
+      <div class="sec-t">Avaliações</div>
+      <div class="row"><span class="row-k">Pontualidade</span><span class="row-v">★ ${av.pontualidade||'—'}</span></div>
+      <div class="row"><span class="row-k">Comportamento</span><span class="row-v">★ ${av.comportamento||'—'}</span></div>
+      <div class="row"><span class="row-k">Conservação</span><span class="row-v">★ ${av.conservacao||'—'}</span></div>
+      <div class="row"><span class="row-k">Temperatura</span><span class="row-v">★ ${av.temperatura||'—'}</span></div>
+    </div>`;
+};
+
+window.salvarNovoMotorista = async function() {
+  const nome = $('mtNome').value.trim();
+  if (!nome) { alert('Informe o nome.'); return; }
+  await addDoc(collection(db,'motoristas'), {
+    nome,
+    cpf: $('mtCPF').value.trim(),
+    telefone: $('mtTel').value.trim(),
+    placacavalo: $('mtPlacaC').value.trim(),
+    placarreta: $('mtPlacaR').value.trim(),
+    validadeCNH: $('mtCNH').value,
+    transportadoraId: $('mtTransp').value||null,
+    status: 'ativo',
+    mediaAvaliacao: null,
+    criadoEm: serverTimestamp()
+  });
+  closeModal('modalNovoMotorista');
+  ['mtNome','mtCPF','mtTel','mtPlacaC','mtPlacaR'].forEach(id=>$(id).value='');
+  loadMotoristas();
+};
+
+window.bloquearMot = async function(id, bloquear) {
+  await updateDoc(doc(db,'motoristas',id), { status: bloquear?'bloqueado':'ativo' });
+  abrirMotorista(id);
+};
+
+window.openAvaliarMot = function(id) {
+  $('avalMotContent').innerHTML = `
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Avalie de 1 a 5 estrelas em cada critério:</p>
+    ${['pontualidade','comportamento','conservacao','temperatura'].map(c=>`
+      <div class="fld">
+        <label>${{pontualidade:'Pontualidade',comportamento:'Comportamento',conservacao:'Conservação da carga',temperatura:'Temperatura -18°C'}[c]}</label>
+        <div class="stars" id="stars_${c}">
+          ${[1,2,3,4,5].map(n=>`<span class="star" onclick="setStar('${c}',${n})" id="star_${c}_${n}">★</span>`).join('')}
+        </div>
+      </div>`).join('')}
+    <button class="btn btn-grad" onclick="salvarAvaliacao('${id}')" style="margin-top:8px;">Salvar avaliação</button>`;
+  openModal('modalAvaliarMot');
+};
+
+window.setStar = function(crit, val) {
+  for (let i=1;i<=5;i++) { const s=$(`star_${crit}_${i}`); if(s) s.classList.toggle('on',i<=val); }
+  window['_star_'+crit] = val;
+};
+
+window.salvarAvaliacao = async function(motId) {
+  const av = {};
+  ['pontualidade','comportamento','conservacao','temperatura'].forEach(c=>{ av[c]=window['_star_'+c]||0; });
+  const media = Object.values(av).reduce((a,b)=>a+b,0)/4;
+  await updateDoc(doc(db,'motoristas',motId), { avaliacoes:av, mediaAvaliacao: media.toFixed(1) });
+  closeModal('modalAvaliarMot');
+  abrirMotorista(motId);
+};
+
+// ─── TRANSPORTADORAS ─────────────────────────────────────
+window.filtrarTransp = function(f) {
+  transpFiltro = f;
+  $('tabTransp').classList.toggle('on',f==='transp');
+  $('tabQuartas').classList.toggle('on',f==='quartas');
+  loadTransportadoras();
+};
+
+async function loadTransportadoras() {
+  $('transpList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  const isOp = ['gestor','operacional'].includes(currentUser.perfil);
+  const isGestor = currentUser.perfil==='gestor';
+  const snap = await getDocs(query(collection(db,'transportadoras'), where('tipo','==', transpFiltro==='quartas'?'quarta':'transportadora')));
+  const ts = snap.docs.map(d=>({id:d.id,...d.data()}));
+  if (ts.length===0) { $('transpList').innerHTML='<div class="empty"><div class="empty-i">🏢</div><div class="empty-t">Nenhuma empresa</div><div class="empty-s">Toque no + para cadastrar</div></div>'; return; }
+  $('transpList').innerHTML = ts.map(t=>`
+    <div class="li">
+      <div class="av" style="background:rgba(59,130,246,.15);color:var(--p2);">🏢</div>
+      <div class="li-body">
+        <div class="li-title">${t.apelido||t.nome}</div>
+        <div class="li-sub">${t.cnpj||'—'} · ${t.uf||'—'}</div>
+      </div>
+      <div class="li-right" style="gap:6px;">
+          <div style="font-size:12px;color:var(--muted);">${t.telefone||'—'}</div>
+          ${t.arquivado?'<span class="pill pr">Arquivado</span>':''}
+          ${!t.arquivado&&isOp?`<button class="btn-sm btn-blue" onclick="abrirEditarTransp('${t.id}')" style="font-size:10px;padding:3px 7px;">✏️</button>`:''}
+          ${!t.arquivado&&isGestor?`<button class="btn-sm btn-red" onclick="submeterArquivamento('transportadora','${t.id}','${(t.apelido||t.nome||'').replace(/'/g,"\'")}')">🗄️</button>`:''}
+          ${t.arquivado&&isGestor?`<button class="btn-sm btn-green" onclick="reativarRegistro('transportadora','${t.id}')" style="font-size:10px;padding:3px 7px;">Reativar</button>`:''}
+        </div>
+    </div>`).join('');
+}
+
+window.salvarNovaTransp = async function() {
+  const nome = $('trNome').value.trim();
+  if (!nome) { alert('Informe o nome.'); return; }
+  await addDoc(collection(db,'transportadoras'), {
+    tipo: $('trTipo').value,
+    nome, apelido: $('trApelido').value.trim(),
+    cnpj: $('trCNPJ').value.trim(),
+    telefone: $('trTel').value.trim(),
+    uf: $('trUF').value.trim(),
+    transpRefId: $('trRefTransp').value||null,
+    criadoEm: serverTimestamp()
+  });
+  closeModal('modalNovaTransp');
+  ['trNome','trApelido','trCNPJ','trTel','trUF'].forEach(id=>$(id).value='');
+  loadTransportadoras();
+};
+
+// ─── CTEs ────────────────────────────────────────────────
+window.filtrarCtes = function(f) {
+  cteFiltro = f;
+  ['tabCtePend','tabCteDiverg','tabCteEmit','tabCteReceb'].forEach(id=>$(id).classList.remove('on'));
+  const map={pendente:'tabCtePend',divergencia:'tabCteDiverg',emitido:'tabCteEmit',recebido:'tabCteReceb'};
+  if(map[f]) $(map[f]).classList.add('on');
+  loadCtes();
+};
+
+async function loadCtes() {
+  $('ctesList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  const snap = await getDocs(query(collection(db,'ctes'), where('status','==',cteFiltro), orderBy('criadoEm','desc')));
+  const ctes = snap.docs.map(d=>({id:d.id,...d.data()}));
+  if (ctes.length===0) { $('ctesList').innerHTML='<div class="empty"><div class="empty-i">📄</div><div class="empty-t">Nenhum CTE</div></div>'; return; }
+  const isOp = ['gestor','operacional'].includes(currentUser.perfil);
+  $('ctesList').innerHTML = ctes.map(cte=>`
+    <div class="li">
+      <div class="av" style="background:rgba(59,130,246,.12);color:var(--p2);">📄</div>
+      <div class="li-body">
+        <div class="li-title">${cte.clienteNome||'—'}</div>
+        <div class="li-sub">${cte.embarque||'—'} · Rateio: ${fmtMoeda(cte.valorRateio)}</div>
+        ${cte.valorEmitido ? `<div class="li-sub">Emitido: ${fmtMoeda(cte.valorEmitido)}</div>` : ''}
+      </div>
+      <div class="li-right">
+        ${statusPill(cte.status)}
+        ${isOp && cte.status==='pendente' ? `<button class="btn-sm btn-blue" onclick="confirmarCtEmissao('${cte.id}')">Confirmar</button>` : ''}
+        ${isOp && cte.status==='pendente' ? `<button class="btn-sm btn-wa" onclick="waCobrarCte('${cte.id}','${cte.clienteNome}')">Cobrar WA</button>` : ''}
+        ${isOp && cte.status==='divergencia' ? `<button class="btn-sm btn-green" onclick="resolverDivergencia('${cte.id}')">Resolver</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+window.confirmarCtEmissao = async function(cteId) {
+  const valor = prompt('Valor emitido no CTE (R$):');
+  if (!valor) return;
+  const d = await getDoc(doc(db,'ctes',cteId));
+  const cte = d.data();
+  const emitido = Number(valor);
+  const rateio = Number(cte.valorRateio||0);
+  const diverge = Math.abs(emitido-rateio) > 0.5;
+  await updateDoc(doc(db,'ctes',cteId), {
+    status: diverge?'divergencia':'emitido',
+    valorEmitido: emitido,
+    emitidoEm: serverTimestamp()
+  });
+  loadCtes();
+};
+
+window.resolverDivergencia = async function(cteId) {
+  if (!confirm('Marcar divergência como resolvida?')) return;
+  await updateDoc(doc(db,'ctes',cteId), { status:'emitido' });
+  loadCtes();
+};
+
+// ─── RECIBOS ─────────────────────────────────────────────
+async function loadRecibos() {
+  $('recibosList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  // Entregas sem recibo
+  const cargasSnap = await getDocs(query(collection(db,'cargas'), where('status','in',['em_transito','concluida'])));
+  let semRecibo = [];
+  for (const cargaDoc of cargasSnap.docs) {
+    const clSnap = await getDocs(query(collection(db,'cargas',cargaDoc.id,'clientes'), where('status','==','entregue')));
+    for (const cl of clSnap.docs) {
+      const clData = cl.data();
+      if (!clData.reciboId) semRecibo.push({ cargaId:cargaDoc.id, clienteId:cl.id, nome:clData.nome, embarque:cargaDoc.data().embarque });
+    }
+  }
+  // Recibos lançados
+  const recSnap = await getDocs(query(collection(db,'recibos'), orderBy('criadoEm','desc')));
+  const recibos = recSnap.docs.map(d=>({id:d.id,...d.data()}));
+  let html = '';
+  if (semRecibo.length>0) {
+    html += `<div class="alert alert-a">⚠️ ${semRecibo.length} entrega(s) sem recibo lançado</div>`;
+    html += semRecibo.map(sr=>`
+      <div class="li">
+        <div class="av" style="background:rgba(245,158,11,.12);color:var(--amber);">📦</div>
+        <div class="li-body"><div class="li-title">${sr.nome}</div><div class="li-sub">Embarque ${sr.embarque}</div></div>
+        <div class="li-right"><button class="btn-sm btn-amber" onclick="abrirRecibo('${sr.cargaId}','${sr.clienteId}','${sr.nome}')">Lançar →</button></div>
+      </div>`).join('');
+  }
+  if (recibos.length>0) {
+    html += `<div style="padding:10px 16px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Recibos lançados</div>`;
+    html += recibos.map(r=>`
+      <div class="li">
+        <div class="av" style="background:rgba(16,185,129,.12);color:var(--green);">🧾</div>
+        <div class="li-body"><div class="li-title">${r.numero||'—'} · ${r.clienteNome||'—'}</div><div class="li-sub">${fmtData(r.data)} · ${r.responsavel||'—'}</div></div>
+        <div class="li-right">${r.assinado?'<span class="pill pg">✓ Assinado</span>':'<span class="pill pr">Sem assinatura</span>'}</div>
+      </div>`).join('');
+  }
+  if (!html) html = '<div class="empty"><div class="empty-i">🧾</div><div class="empty-t">Nenhum recibo</div></div>';
+  $('recibosList').innerHTML = html;
+}
+
+window.abrirRecibo = function(cargaId, clienteId, nome) {
+  currentCargaId = cargaId;
+  currentClienteIdx = clienteId;
+  const today = new Date().toISOString().split('T')[0];
+  const hora = new Date().toTimeString().slice(0,5);
+  $('recData').value = today;
+  $('recHora').value = hora;
+  $('recNum').value = 'RD-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-4);
+  openModal('modalRecibo');
+};
+
+window.confirmarRecibo = async function() {
+  const num = $('recNum').value.trim();
+  if (!num) { alert('Informe o número do recibo.'); return; }
+  // Salvar recibo
+  const d = await getDoc(doc(db,'cargas',currentCargaId,'clientes',currentClienteIdx));
+  const clNome = d.data().nome;
+  const cargaDoc = await getDoc(doc(db,'cargas',currentCargaId));
+  const recRef = await addDoc(collection(db,'recibos'), {
+    numero: num,
+    cargaId: currentCargaId,
+    clienteId: currentClienteIdx,
+    clienteNome: clNome,
+    embarque: cargaDoc.data().embarque,
+    data: $('recData').value ? Timestamp.fromDate(new Date($('recData').value+'T'+$('recHora').value)) : serverTimestamp(),
+    responsavel: $('recResp').value.trim(),
+    assinado: $('recAssinado').checked,
+    obs: $('recObs').value.trim(),
+    criadoEm: serverTimestamp(),
+    criadoPor: currentUser.id
+  });
+  // Atualizar cliente com reciboId
+  await updateDoc(doc(db,'cargas',currentCargaId,'clientes',currentClienteIdx), { reciboId: recRef.id });
+  // Atualizar CTE correspondente para recebido
+  const cteSnap = await getDocs(query(collection(db,'ctes'), where('cargaId','==',currentCargaId), where('clienteId','==',currentClienteIdx)));
+  for (const cteDoc of cteSnap.docs) await updateDoc(doc(db,'ctes',cteDoc.id), { status:'recebido', recebidoEm: serverTimestamp() });
+  closeModal('modalRecibo');
+  ['recNum','recResp','recObs'].forEach(id=>$(id).value='');
+  if (currentScreen==='recibos') loadRecibos();
+  else if (currentScreen==='cargaDet') abrirCarga(currentCargaId);
+};
+
+// ─── PESQUISAS ───────────────────────────────────────────
+async function loadPesquisas() {
+  $('pesquisasList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  const snap = await getDocs(query(collection(db,'pesquisas'), orderBy('criadoEm','desc')));
+  const ps = snap.docs.map(d=>({id:d.id,...d.data()}));
+  if (ps.length===0) { $('pesquisasList').innerHTML='<div class="empty"><div class="empty-i">⭐</div><div class="empty-t">Nenhuma pesquisa</div></div>'; return; }
+  $('pesquisasList').innerHTML = ps.map(p=>`
+    <div class="li">
+      <div class="av" style="background:rgba(245,158,11,.12);color:var(--amber);">⭐</div>
+      <div class="li-body">
+        <div class="li-title">${p.targetNome||'—'}</div>
+        <div class="li-sub">${p.tipo==='receptor'?'Receptor':'Transportadora'} · ${p.embarque||'—'}</div>
+      </div>
+      <div class="li-right"><div style="font-size:16px;font-weight:700;color:var(--amber);">★ ${p.notaGeral||'—'}</div><div style="font-size:11px;color:var(--muted);">${fmtData(p.criadoEm)}</div></div>
+    </div>`).join('');
+}
+
+window.abrirPesquisa = function(cargaId, clienteId, nome) {
+  currentCargaId = cargaId;
+  currentClienteIdx = clienteId;
+  $('pesqContent').innerHTML = `
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Registre a avaliação de <strong>${nome}</strong>:</p>
+    ${['notaGeral','prazo','atendimento','comunicacao'].map(c=>`
+      <div class="fld">
+        <label>${{notaGeral:'Nota geral',prazo:'Prazo / Pontualidade',atendimento:'Atendimento',comunicacao:'Comunicação'}[c]}</label>
+        <div class="stars" id="stars_pesq_${c}">
+          ${[1,2,3,4,5].map(n=>`<span class="star" onclick="setPesqStar('${c}',${n})" id="star_pesq_${c}_${n}">★</span>`).join('')}
+        </div>
+      </div>`).join('')}
+    <div class="fld"><label>Observações</label><textarea id="pesqObs" placeholder="Comentários..."></textarea></div>
+    <button class="btn btn-wa" onclick="waPesquisa('${cargaId}','${nome}')" style="margin-bottom:8px;">📱 Enviar pedido via WA</button>
+    <button class="btn btn-grad" onclick="salvarPesquisa('${cargaId}','${clienteId}','${nome}')">Salvar pesquisa</button>`;
+  openModal('modalPesquisa');
+};
+
+window.setPesqStar = function(crit, val) {
+  for (let i=1;i<=5;i++) { const s=$(`star_pesq_${crit}_${i}`); if(s) s.classList.toggle('on',i<=val); }
+  window['_pesq_'+crit] = val;
+};
+
+window.salvarPesquisa = async function(cargaId, clienteId, nome) {
+  const notas = {};
+  ['notaGeral','prazo','atendimento','comunicacao'].forEach(c=>{ notas[c]=window['_pesq_'+c]||0; });
+  const cargaDoc = await getDoc(doc(db,'cargas',cargaId));
+  await addDoc(collection(db,'pesquisas'), {
+    tipo:'receptor', targetNome:nome,
+    cargaId, clienteId, embarque:cargaDoc.data().embarque,
+    ...notas, obs: $('pesqObs').value.trim(),
+    criadoEm: serverTimestamp(), criadoPor: currentUser.id
+  });
+  closeModal('modalPesquisa');
+  if (currentScreen==='pesquisas') loadPesquisas();
+};
+
+// ─── DASHBOARD ───────────────────────────────────────────
+async function loadDashboard() {
+  $('dashContent').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  const [cargasSnap, motSnap, cteSnap, pesqSnap, nfesSnap] = await Promise.all([
+    getDocs(collection(db,'cargas')),
+    getDocs(query(collection(db,'motoristas'), where('status','==','ativo'))),
+    getDocs(query(collection(db,'ctes'), where('status','in',['pendente','divergencia']))),
+    getDocs(collection(db,'pesquisas')),
+    getDocs(collection(db,'nfes'))
+  ]);
+
+  const cargas = cargasSnap.docs.map(d=>d.data());
+  const nfes = nfesSnap.docs.map(d=>d.data());
+  const ativas = cargas.filter(c=>['planejada','em_transito'].includes(c.status)).length;
+  const provs = cargas.filter(c=>c.status==='provisoria').length;
+  const concluidas = cargas.filter(c=>c.status==='concluida').length;
+
+  // Totais gerais de cargas ativas/concluidas (com NF)
+  let totalKg=0, totalFrete=0, totalFaturamento=0;
+  nfes.forEach(n=>{ totalKg+=Number(n.pesoLiq||0); totalFaturamento+=Number(n.valorNFe||0); });
+  cargas.filter(c=>c.status!=='provisoria').forEach(c=>{ totalFrete+=Number(c.valorFrete||0); });
+  const custoKg = totalKg>0 ? (totalFrete/totalKg).toFixed(2) : '0.00';
+  const impactoLogistico = totalFaturamento>0 ? (totalFrete/totalFaturamento*100).toFixed(1) : '0.0';
+
+  // Por transportadora
+  const byTransp = {};
+  for (const carga of cargas.filter(c=>c.status!=='provisoria')) {
+    const tid = carga.transportadoraId||'sem_transp';
+    if (!byTransp[tid]) byTransp[tid] = { carregamentos:0, kg:0, frete:0, nome:'—' };
+    byTransp[tid].carregamentos++;
+    byTransp[tid].frete += Number(carga.valorFrete||0);
+    if (carga.transportadoraId) {
+      try { const td = await getDoc(doc(db,'transportadoras',carga.transportadoraId)); byTransp[tid].nome = (td.data() && td.data().apelido) || '—'; } catch(e){}
+    } else { byTransp[tid].nome = 'Sem transportadora'; }
+  }
+  nfes.forEach(n=>{ const tid = n.transportadoraId||'sem_transp'; if(byTransp[tid]) byTransp[tid].kg += Number(n.pesoLiq||0); });
+
+  // Por UF
+  const byUF = {};
+  nfes.forEach(n=>{ const uf=n.uf||'—'; if(!byUF[uf]) byUF[uf]={kg:0,faturamento:0,count:0}; byUF[uf].kg+=Number(n.pesoLiq||0); byUF[uf].faturamento+=Number(n.valorNFe||0); byUF[uf].count++; });
+
+  // Por Região
+  const byRegiao = {};
+  nfes.forEach(n=>{ const r=n.regiao||'—'; if(!byRegiao[r]) byRegiao[r]={kg:0,count:0}; byRegiao[r].kg+=Number(n.pesoLiq||0); byRegiao[r].count++; });
+
+  const pesqs = pesqSnap.docs.map(d=>d.data());
+  const mediaScore = pesqs.length>0 ? (pesqs.reduce((a,b)=>a+(Number(b.notaGeral)||0),0)/pesqs.length).toFixed(1) : '—';
+
+  // Transpórtadoras table
+  const transpRows = Object.entries(byTransp).sort((a,b)=>b[1].carregamentos-a[1].carregamentos).map(([tid,t])=>{
+    const media = t.kg>0 ? (t.frete/t.kg).toFixed(2) : '—';
+    const pct = cargas.filter(c=>c.status!=='provisoria').length>0 ? (t.carregamentos/cargas.filter(c=>c.status!=='provisoria').length*100).toFixed(0) : 0;
+    return `<div class="row"><span class="row-k">${t.nome}</span><span class="row-v" style="text-align:right;font-size:12px;">${t.carregamentos} car. · ${(t.kg/1000).toFixed(1)}t · ${fmtMoeda(t.frete)} · R$${media}/kg · ${pct}%</span></div>`;
+  }).join('');
+
+  // UF table
+  const ufRows = Object.entries(byUF).sort((a,b)=>b[1].kg-a[1].kg).slice(0,10).map(([uf,u])=>{
+    const media = u.kg>0 ? (totalFrete>0?(totalFrete*(u.kg/totalKg)/u.kg).toFixed(2):'—') : '—';
+    const pct = totalKg>0?(u.kg/totalKg*100).toFixed(1):0;
+    return `<div class="row"><span class="row-k">${uf}</span><span class="row-v" style="text-align:right;font-size:12px;">${(u.kg).toLocaleString('pt-BR')} kg · ${pct}% · R$${media}/kg</span></div>`;
+  }).join('');
+
+  // Região table
+  const regRows = Object.entries(byRegiao).sort((a,b)=>b[1].kg-a[1].kg).map(([reg,r])=>{
+    const pct = totalKg>0?(r.kg/totalKg*100).toFixed(1):0;
+    const media = r.kg>0 && totalFrete>0 ? (totalFrete*(r.kg/totalKg)/r.kg).toFixed(2) : '—';
+    return `<div class="row"><span class="row-k">${reg}</span><span class="row-v" style="text-align:right;font-size:12px;">${(r.kg).toLocaleString('pt-BR')} kg · ${pct}% · R$${media}/kg</span></div>`;
+  }).join('');
+
+  $('dashContent').innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-v">${cargas.length}</div><div class="kpi-l">Total carregamentos</div></div>
+      <div class="kpi"><div class="kpi-v">${ativas}</div><div class="kpi-l">Cargas ativas</div></div>
+      <div class="kpi"><div class="kpi-v">${provs}</div><div class="kpi-l">Provisórias</div></div>
+      <div class="kpi"><div class="kpi-v">${concluidas}</div><div class="kpi-l">Concluídas</div></div>
+      <div class="kpi"><div class="kpi-v">${(totalKg/1000).toFixed(1)}t</div><div class="kpi-l">Kg transportado</div></div>
+      <div class="kpi"><div class="kpi-v">${fmtMoeda(totalFrete)}</div><div class="kpi-l">Total fretes</div></div>
+      <div class="kpi"><div class="kpi-v">R$ ${custoKg}</div><div class="kpi-l">Média R$/kg</div></div>
+      <div class="kpi"><div class="kpi-v">${impactoLogistico}%</div><div class="kpi-l">Impacto logístico</div></div>
+      <div class="kpi"><div class="kpi-v">${fmtMoeda(totalFaturamento)}</div><div class="kpi-l">Faturamento (NFs)</div></div>
+      <div class="kpi"><div class="kpi-v">★ ${mediaScore}</div><div class="kpi-l">Satisfação média</div></div>
+      <div class="kpi"><div class="kpi-v">${motSnap.size}</div><div class="kpi-l">Motoristas ativos</div></div>
+      <div class="kpi"><div class="kpi-v">${cteSnap.size}</div><div class="kpi-l">CTEs pendentes</div></div>
+    </div>
+    <div class="sec">
+      <div class="sec-t">Por Transportadora</div>
+      ${transpRows||'<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nenhum dado.</div>'}
+    </div>
+    <div class="sec">
+      <div class="sec-t">Por UF (Top 10)</div>
+      ${ufRows||'<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nenhum dado.</div>'}
+    </div>
+    <div class="sec">
+      <div class="sec-t">Por Região</div>
+      ${regRows||'<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nenhum dado.</div>'}
+    </div>
+    <div class="sec">
+      <div class="sec-t">Ações</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-sm btn-wa" onclick="waRelatorioExec()">📱 WA Relatório</button>
+        <button class="btn-sm btn-blue" onclick="window.print()">🖨️ Imprimir</button>
+      </div>
+    </div>`;
+}
+
+// ─── USUÁRIOS ────────────────────────────────────────────
+async function loadUsuarios() {
+  $('usuariosList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  const snap = await getDocs(query(collection(db,'usuarios'), orderBy('criadoEm','desc')));
+  const users = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const pendentes = users.filter(u=>u.status==='pendente_aprovacao');
+  const ativos = users.filter(u=>u.status==='aprovado'||u.status==='ativo');
+  const isGestor = currentUser.perfil==='gestor';
+  let html = '';
+  if (pendentes.length>0 && isGestor) {
+    html += `<div class="alert alert-a">👥 ${pendentes.length} solicitação(ões) aguardando aprovação</div>`;
+    html += pendentes.map(u=>`
+      <div class="li">
+        <div class="av" style="background:${avatarColor(u.nome)};color:#fff;">${initials(u.nome||u.email)}</div>
+        <div class="li-body">
+          <div class="li-title">${u.nome||u.email}</div>
+          <div class="li-sub">${u.email} · ${u.perfil||'—'} · ${u.cargo||'—'}</div>
+        </div>
+        <div class="li-right" style="gap:6px;">
+          <button class="btn-sm btn-green" onclick="aprovarUser('${u.id}')">✓ Aprovar</button>
+          <button class="btn-sm btn-red" onclick="rejeitarUser('${u.id}')">Rejeitar</button>
+        </div>
+      </div>`).join('');
+  }
+  html += `<div style="padding:10px 16px 4px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Usuários ativos (${ativos.length + (currentUser.perfil==='gestor'?1:0)})</div>`;
+  // Sempre mostrar o usuário gestor atual primeiro
+  html += `<div class="li">
+    <div class="av" style="background:${avatarColor(currentUser.nome)};color:#fff;">${initials(currentUser.nome)}</div>
+    <div class="li-body"><div class="li-title">${currentUser.nome||'—'} (você)</div><div class="li-sub">${currentUser.email} · ${currentUser.cargo||'—'}</div></div>
+    <div class="li-right"><span class="pill pb">Gestor</span></div>
+  </div>`;
+  html += ativos.filter(u=>u.id!==currentUser.id).map(u=>`
+    <div class="li">
+      <div class="av" style="background:${avatarColor(u.nome)};color:#fff;">${initials(u.nome||u.email)}</div>
+      <div class="li-body">
+        <div class="li-title">${u.nome||u.email}</div>
+        <div class="li-sub">${u.email} · ${u.cargo||'—'}</div>
+      </div>
+      <div class="li-right">
+        <span class="pill ${u.perfil==='gestor'?'pb':u.perfil==='operacional'?'pg':'pz'}">${u.perfil||'—'}</span>
+        ${isGestor ? `<button class="btn-sm btn-red" onclick="revogarUser('${u.id}')" style="font-size:10px;padding:3px 8px;">Revogar</button>` : ''}
+      </div>
+    </div>`).join('');
+  if (isGestor) {
+    html += `<div style="padding:14px 16px 6px;">
+      <button class="btn btn-wa" onclick="openModal('modalConvidarUser')">📱 Convidar via WhatsApp</button>
+    </div>`;
+  }
+  $('usuariosList').innerHTML = html;
+}
+
+window.aprovarUser = async function(id) {
+  await updateDoc(doc(db,'usuarios',id), { status:'aprovado', aprovadoEm: serverTimestamp(), aprovadoPor: currentUser.id });
+  loadUsuarios();
+  loadHome();
+};
+
+window.rejeitarUser = async function(id) {
+  if (!confirm('Rejeitar este usuário?')) return;
+  await updateDoc(doc(db,'usuarios',id), { status:'rejeitado' });
+  loadUsuarios();
+};
+
+window.revogarUser = async function(id) {
+  if (!confirm('Revogar acesso deste usuário?')) return;
+  await updateDoc(doc(db,'usuarios',id), { status:'rejeitado' });
+  loadUsuarios();
+};
+
+// ─── WHATSAPP HELPERS ────────────────────────────────────
+function waOpen(msg) {
+  window.open('https://wa.me/?text='+encodeURIComponent(msg));
+}
+
+window.waBemVindo = async function(cargaId) {
+  const d = await getDoc(doc(db,'cargas',cargaId));
+  const c = d.data();
+  var _mnSnap = c.motoristaId ? (await getDoc(doc(db,'motoristas',c.motoristaId))).data() : null; let motNome = _mnSnap ? (_mnSnap.nome || '—') : '—';
+  var _tdSnap = c.transportadoraId ? (await getDoc(doc(db,'transportadoras',c.transportadoraId))).data() : null; let transpNome = _tdSnap ? (_tdSnap.apelido || '—') : '—';
+  const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
+  const cls = clSnap.docs.map(d=>d.data());
+  const entregas = cls.map((cl,i)=>`${i+1}. ${cl.nome} — ${cl.cidade||'—'}`).join('\n');
+  const msg = `Olá, ${motNome}! Tudo bem?\n\nSou Diego Chaves, Gerente de Logística da *Maris Pescados*. Vou acompanhar pessoalmente o seu carregamento.\n\n📋 *Embarque ${c.embarque}*\n🗺️ Rota: ${c.rota||'—'}\n🚛 Transportadora: ${transpNome}\n📦 ${(c.tipoCarga ? c.tipoCarga.toUpperCase() : '—')} · ${fmtKg(c.pesoLiq)}\n🌡️ Temperatura: -18°C\n📅 Saída: ${fmtData(c.dataSaida)}\n\n*Entregas:*\n${entregas}\n\nBom trabalho e boa viagem! 🤝\n_DYA Soluções — Maris Pescados_`;
+  waOpen(msg);
+};
+
+window.waRomaneio = async function(cargaId) {
+  const d = await getDoc(doc(db,'cargas',cargaId));
+  const c = d.data();
+  const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
+  const cls = clSnap.docs.map(d=>d.data());
+  const linhas = cls.map((cl,i)=>`${i+1}. *${cl.nome}* — ${cl.cidade||'—'}\n   📦 ${fmtKg(cl.pesoLiq)} | 💰 ${fmtMoeda(cl.valorNF)}\n   📅 Prev: ${fmtData(cl.previsao)}${cl.agendNum?'\n   📋 Agend: '+cl.agendNum:''}`).join('\n\n');
+  const msg = `📋 *ROMANEIO — ${c.embarque}*\n🗺️ ${c.rota||'—'} · ${(c.tipoCarga ? c.tipoCarga.toUpperCase() : '—')}\n📦 ${fmtKg(c.pesoLiq)} | 💰 ${fmtMoeda(c.valorFrete)}\n\n${linhas}\n\n_DYA Soluções · Maris Pescados_`;
+  waOpen(msg);
+};
+
+window.waCliente = async function(cargaId, clienteId) {
+  const d = await getDoc(doc(db,'cargas',cargaId,'clientes',clienteId));
+  const cl = d.data();
+  const cargaDoc = await getDoc(doc(db,'cargas',cargaId));
+  const c = cargaDoc.data();
+  const msg = `📦 *Atualização de Entrega — Maris Pescados*\n\nOlá! Seguem as informações da sua entrega:\n\n*Embarque:* ${c.embarque}\n*Rota:* ${c.rota||'—'}\n*Destino:* ${cl.cidade||'—'}\n*Previsão:* ${fmtData(cl.previsao)}\n*Status:* ${cl.status||'Em trânsito'}\n\n_DYA Soluções · Maris Pescados_`;
+  waOpen(msg);
+};
+
+window.waCobrarCte = function(cteId, clienteNome) {
+  const msg = `Olá! Segue cobrança referente ao CTE do cliente *${clienteNome}*.\n\nO documento ainda não foi emitido. Solicitamos a emissão com urgência para regularização do processo.\n\n_DYA Soluções · Maris Pescados_`;
+  waOpen(msg);
+};
+
+window.waPesquisa = function(cargaId, nome) {
+  const msg = `Olá! Gostaríamos de saber como foi sua experiência com a entrega da *Maris Pescados*.\n\nPor favor, avalie de 1 a 5 os itens:\n1️⃣ Nota geral\n2️⃣ Prazo / Pontualidade\n3️⃣ Atendimento\n4️⃣ Comunicação\n\nSua opinião é muito importante para nós! 🙏\n_DYA Soluções · Maris Pescados_`;
+  waOpen(msg);
+};
+
+window.waRelatorioExec = async function() {
+  const cargasSnap = await getDocs(collection(db,'cargas'));
+  const cargas = cargasSnap.docs.map(d=>d.data());
+  const ativas = cargas.filter(c=>['planejada','em_transito'].includes(c.status)).length;
+  const provs = cargas.filter(c=>c.status==='provisoria').length;
+  let totalKg=0,totalFrete=0;
+  cargas.forEach(c=>{totalKg+=Number(c.pesoLiq||0);totalFrete+=Number(c.valorFrete||0);});
+  const msg = `📊 *Relatório DYA Soluções*\n📅 ${new Date().toLocaleDateString('pt-BR')}\n\n🚛 Cargas ativas: ${ativas}\n📋 Provisórias: ${provs}\n✅ Concluídas: ${cargas.filter(c=>c.status==='concluida').length}\n⚖️ Peso total: ${(totalKg/1000).toFixed(1)}t\n💰 Fretes: ${fmtMoeda(totalFrete)}\n\n_DYA Soluções · Maris Pescados_`;
+  waOpen(msg);
+};
+
+window.enviarConviteWA = function() {
+  const nome = $('invNome').value.trim();
+  const tel = $('invTel').value.trim();
+  const email = $('invEmail').value.trim();
+  const perfil = $('invPerfil').value;
+  if (!nome||!tel) { alert('Informe nome e telefone.'); return; }
+  const msg = `Olá, *${nome}*! 👋\n\nVocê foi convidado(a) para acessar o *DYA Soluções*, sistema de gestão logística da Maris Pescados.\n\n📱 *Acesse agora:*\nhttps://dya-solucoes.netlify.app\n\n📧 *Seu e-mail de acesso:* ${email||'(a definir)'}\n👤 *Perfil:* ${perfil}\n\nAo acessar pela primeira vez, complete seu cadastro com seus dados.\n\nQualquer dúvida, entre em contato! 🤝\n_Diego Chaves · DYA Soluções_`;
+  const numero = tel.replace(/\D/g,'');
+  window.open(`https://wa.me/55${numero}?text=${encodeURIComponent(msg)}`);
+  closeModal('modalConvidarUser');
+};
+
+
+// ─── SISTEMA DE APROVAÇÕES ──────────────────────────────────────────────
+
+// Helper: submeter solicitação de edição/exclusão
+async function criarSolicitacao(tipo, acao, entidade, entidadeId, dadosAntes, dadosDepois) {
+  await addDoc(collection(db,'aprovacoes'), {
+    tipo,       // 'carga' | 'motorista' | 'transportadora' | 'cliente'
+    acao,       // 'editar' | 'arquivar'
+    entidade,   // nome/identificador do registro
+    entidadeId,
+    dadosAntes,
+    dadosDepois,
+    status: 'pendente',
+    solicitadoPor: currentUser.id,
+    solicitadoPorNome: currentUser.nome||currentUser.email,
+    criadoEm: serverTimestamp()
+  });
+  // Atualizar badge
+  const snap = await getDocs(query(collection(db,'aprovacoes'), where('status','==','pendente')));
+  $('badgeAprov').style.display='flex';
+  $('badgeAprov').textContent=snap.size;
+}
+
+// ── ABRIR MODAL EDITAR CARGA ─────────────────────────────────────────
+window.abrirEditarCarga = async function(id) {
+  const d = await getDoc(doc(db,'cargas',id));
+  const c = d.data();
+  $('ecId').value = id;
+  $('ecEmbarque').value = c.embarque||'';
+  $('ecRota').value = c.rota||'';
+  $('ecData').value = c.dataSaida ? c.dataSaida.toDate().toISOString().split('T')[0] : '';
+  $('ecTipoCarga').value = c.tipoCarga||'Paletizada';
+  $('ecFrete').value = c.frete||'CIF';
+  $('ecContratante').value = c.contratante||'Diego Chaves';
+  $('ecValorFrete').value = c.valorFrete||'';
+  $('ecObs').value = c.obs||'';
+  await loadTranspSelectModal('ecTransp'); $('ecTransp').value = c.transportadoraId||'';
+  await loadMotoristaSelectModal('ecMotorista'); $('ecMotorista').value = c.motoristaId||'';
+  openModal('modalEditarCarga');
+};
+
+// ── ABRIR MODAL EDITAR MOTORISTA ─────────────────────────────────────
+window.abrirEditarMotorista = async function(id) {
+  try {
+    const d = await getDoc(doc(db,'motoristas',id));
+    const m = d.data();
+    if (!m) { alert('Dados não encontrados para id: ' + id); return; }
+    $('emId').value = id;
+    $('emNome').value = m.nome||'';
+    $('emCPF').value = m.cpf||'';
+    $('emTel').value = m.telefone||'';
+    $('emPlacaC').value = m.placacavalo||'';
+    $('emPlacaR').value = m.placarreta||'';
+    $('emCNH').value = m.validadeCNH||'';
+    await loadTranspSelectModal('emTransp');
+    $('emTransp').value = m.transportadoraId||'';
+    openModal('modalEditarMotorista');
+  } catch(e) {
+    alert('Erro ao abrir edição: ' + e.message);
+    console.error(e);
+  }
+};
+
+// ── ABRIR MODAL EDITAR TRANSPORTADORA ────────────────────────────────
+window.abrirEditarTransp = async function(id) {
+  try {
+    const d = await getDoc(doc(db,'transportadoras',id));
+    const t = d.data();
+    if (!t) { alert('Dados não encontrados para id: ' + id); return; }
+    $('etId').value = id;
+    $('etNome').value = t.nome||'';
+    $('etApelido').value = t.apelido||'';
+    $('etCNPJ').value = t.cnpj||'';
+    $('etTel').value = t.telefone||'';
+    $('etUF').value = t.uf||'';
+    openModal('modalEditarTransp');
+  } catch(e) {
+    alert('Erro ao abrir edição: ' + e.message);
+    console.error(e);
+  }
+};
+
+// ── SUBMETER EDIÇÃO (cria solicitação) ───────────────────────────────
+window.submeterEdicao = async function(tipo) {
+  const isGestor = currentUser.perfil === 'gestor';
+  if (tipo === 'carga') {
+    const id = $('ecId').value;
+    const d = await getDoc(doc(db,'cargas',id)); const antes = d.data();
+    const depois = {
+      embarque: $('ecEmbarque').value.trim(),
+      rota: $('ecRota').value.trim(),
+      tipoCarga: $('ecTipoCarga').value,
+      frete: $('ecFrete').value,
+      contratante: $('ecContratante').value,
+      transportadoraId: $('ecTransp').value||null,
+      motoristaId: $('ecMotorista').value||null,
+      valorFrete: Number($('ecValorFrete').value)||0,
+      obs: $('ecObs').value.trim(),
+      dataSaida: $('ecData').value ? $('ecData').value : null,
+    };
+    closeModal('modalEditarCarga');
+    if (isGestor) { await updateDoc(doc(db,'cargas',id), depois); abrirCarga(id); return; }
+    await criarSolicitacao('carga','editar',`Embarque ${antes.embarque}`,id,antes,depois);
+    alert('Solicitação enviada para aprovação do gestor.');
+  }
+  if (tipo === 'motorista') {
+    const id = $('emId').value;
+    const d = await getDoc(doc(db,'motoristas',id)); const antes = d.data();
+    const depois = { nome:$('emNome').value.trim(), cpf:$('emCPF').value.trim(), telefone:$('emTel').value.trim(), placacavalo:$('emPlacaC').value.trim(), placarreta:$('emPlacaR').value.trim(), validadeCNH:$('emCNH').value, transportadoraId:$('emTransp').value||null };
+    closeModal('modalEditarMotorista');
+    if (isGestor) { await updateDoc(doc(db,'motoristas',id), depois); abrirMotorista(id); return; }
+    await criarSolicitacao('motorista','editar',antes.nome,id,antes,depois);
+    alert('Solicitação enviada para aprovação do gestor.');
+  }
+  if (tipo === 'transportadora') {
+    const id = $('etId').value;
+    const d = await getDoc(doc(db,'transportadoras',id)); const antes = d.data();
+    const depois = { nome:$('etNome').value.trim(), apelido:$('etApelido').value.trim(), cnpj:$('etCNPJ').value.trim(), telefone:$('etTel').value.trim(), uf:$('etUF').value.trim() };
+    closeModal('modalEditarTransp');
+    if (isGestor) { await updateDoc(doc(db,'transportadoras',id), depois); loadTransportadoras(); return; }
+    await criarSolicitacao('transportadora','editar',antes.apelido||antes.nome,id,antes,depois);
+    alert('Solicitação enviada para aprovação do gestor.');
+  }
+};
+
+// ── SUBMETER ARQUIVAMENTO ─────────────────────────────────────────────
+window.submeterArquivamento = async function(tipo, id, nome) {
+  const isGestor = currentUser.perfil === 'gestor';
+  if (!confirm(`${isGestor?'Arquivar':'Solicitar arquivamento de'} "${nome}"?`)) return;
+  if (isGestor) {
+    await updateDoc(doc(db, tipo==='carga'?'cargas':tipo==='motorista'?'motoristas':'transportadoras', id), { arquivado: true, arquivadoEm: serverTimestamp() });
+    if (tipo==='carga') loadCargas();
+    if (tipo==='motorista') loadMotoristas();
+    if (tipo==='transportadora') loadTransportadoras();
+    return;
+  }
+  const d = await getDoc(doc(db, tipo==='carga'?'cargas':tipo==='motorista'?'motoristas':'transportadoras', id));
+  await criarSolicitacao(tipo,'arquivar',nome,id,d.data(),null);
+  alert('Solicitação de arquivamento enviada para aprovação do gestor.');
+};
+
+// ── CARREGAR TELA DE APROVAÇÕES ───────────────────────────────────────
+async function loadAprovacoes() {
+  $('aprovacoesList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  const snap = await getDocs(query(collection(db,'aprovacoes'), orderBy('criadoEm','desc')));
+  const aprovs = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const pendentes = aprovs.filter(a=>a.status==='pendente');
+  const historico = aprovs.filter(a=>a.status!=='pendente');
+
+  if (aprovs.length===0) {
+    $('aprovacoesList').innerHTML='<div class="empty"><div class="empty-i">✅</div><div class="empty-t">Nenhuma solicitação</div><div class="empty-s">Tudo em dia!</div></div>';
+    return;
+  }
+
+  const isGestor = currentUser.perfil === 'gestor';
+
+  function renderDiff(antes, depois, acao) {
+    if (acao==='arquivar') {
+      return `<div class="archived-banner"><span style="font-size:18px;">🗄️</span><div style="font-size:13px;color:var(--red);">Solicitação de <strong>arquivamento</strong> deste registro. O dado será preservado mas ficará oculto.</div></div>`;
+    }
+    if (!antes||!depois) return '';
+    const camposLabel = {
+      embarque:'Embarque', rota:'Rota', tipoCarga:'Tipo', frete:'Frete',
+      contratante:'Contratante', valorFrete:'Valor frete', obs:'Obs',
+      nome:'Nome', cpf:'CPF', telefone:'Telefone', placacavalo:'Placa cavalo',
+      placarreta:'Placa carreta', validadeCNH:'Val. CNH',
+      apelido:'Apelido', cnpj:'CNPJ', uf:'UF'
+    };
+    const campos = Object.keys(camposLabel);
+    const mudancas = campos.filter(k => String(antes[k]||'') !== String(depois[k]||''));
+    if (mudancas.length===0) return '<div style="font-size:12px;color:var(--muted);padding:8px;">Sem alterações detectadas.</div>';
+    return `<div class="aprov-diff">
+      <div class="aprov-col before">
+        <div class="aprov-col-title">❌ Antes</div>
+        ${mudancas.map(k=>`<div class="aprov-field"><div class="aprov-field-k">${camposLabel[k]}</div><div class="aprov-field-v">${antes[k]||'—'}</div></div>`).join('')}
+      </div>
+      <div class="aprov-col after">
+        <div class="aprov-col-title">✅ Depois</div>
+        ${mudancas.map(k=>`<div class="aprov-field"><div class="aprov-field-k">${camposLabel[k]}</div><div class="aprov-field-v changed">${depois[k]||'—'}</div></div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  let html = '';
+  if (pendentes.length>0) {
+    html += `<div style="padding:10px 16px 4px;font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;">⏳ Pendentes (${pendentes.length})</div>`;
+    html += pendentes.map(a=>`
+      <div class="aprov-card" style="margin:8px 16px;">
+        <div class="aprov-hdr">
+          <div>
+            <span class="aprov-tipo ${a.acao==='arquivar'?'del':'edit'}">${a.acao==='arquivar'?'🗄️ Arquivar':'✏️ Editar'} ${a.tipo}</span>
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-top:5px;">${a.entidade}</div>
+          </div>
+          <div class="aprov-user">por ${a.solicitadoPorNome}<br>${fmtData(a.criadoEm)}</div>
+        </div>
+        <div class="aprov-body">
+          ${renderDiff(a.dadosAntes, a.dadosDepois, a.acao)}
+          ${isGestor ? `<div class="aprov-acts">
+            <button class="btn-sm btn-green" onclick="resolverAprovacao('${a.id}','aprovar')">✓ Aprovar</button>
+            <button class="btn-sm btn-red" onclick="resolverAprovacao('${a.id}','reprovar')">✗ Reprovar</button>
+          </div>` : '<div style="font-size:11px;color:var(--muted);">Aguardando decisão do gestor.</div>'}
+        </div>
+      </div>`).join('');
+  }
+
+  if (historico.length>0) {
+    html += `<div style="padding:14px 16px 4px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Histórico</div>`;
+    html += historico.slice(0,10).map(a=>`
+      <div class="li">
+        <div class="av" style="background:${a.status==='aprovado'?'rgba(16,185,129,.15)':'rgba(239,68,68,.12)'};color:${a.status==='aprovado'?'var(--green)':'var(--red)'};">${a.status==='aprovado'?'✓':'✗'}</div>
+        <div class="li-body">
+          <div class="li-title">${a.acao==='arquivar'?'Arquivar':'Editar'} ${a.tipo} — ${a.entidade}</div>
+          <div class="li-sub">por ${a.solicitadoPorNome} · ${fmtData(a.criadoEm)}</div>
+        </div>
+        <div class="li-right">${a.status==='aprovado'?'<span class="pill pg">Aprovado</span>':'<span class="pill pr">Reprovado</span>'}</div>
+      </div>`).join('');
+  }
+
+  $('aprovacoesList').innerHTML = html;
+}
+
+// ── RESOLVER APROVAÇÃO (gestor) ───────────────────────────────────────
+window.resolverAprovacao = async function(aprovId, decisao) {
+  const d = await getDoc(doc(db,'aprovacoes',aprovId));
+  const aprov = d.data();
+  if (decisao === 'aprovar') {
+    const colMap = { carga:'cargas', motorista:'motoristas', transportadora:'transportadoras', cliente:'clientes' };
+    const colecao = colMap[aprov.tipo];
+    if (aprov.acao === 'editar' && aprov.dadosDepois) {
+      // Converter data de string para Timestamp se necessário
+      const dados = {...aprov.dadosDepois};
+      if (dados.dataSaida && typeof dados.dataSaida === 'string') {
+        dados.dataSaida = Timestamp.fromDate(new Date(dados.dataSaida+'T12:00:00'));
+      }
+      await updateDoc(doc(db, colecao, aprov.entidadeId), dados);
+    }
+    if (aprov.acao === 'arquivar') {
+      await updateDoc(doc(db, colecao, aprov.entidadeId), { arquivado: true, arquivadoEm: serverTimestamp() });
+    }
+  }
+  await updateDoc(doc(db,'aprovacoes',aprovId), {
+    status: decisao === 'aprovar' ? 'aprovado' : 'reprovado',
+    resolvidoPor: currentUser.id,
+    resolvidoEm: serverTimestamp()
+  });
+  loadAprovacoes();
+  // Atualizar badge
+  const snap = await getDocs(query(collection(db,'aprovacoes'), where('status','==','pendente')));
+  if (snap.size>0) { $('badgeAprov').style.display='flex'; $('badgeAprov').textContent=snap.size; }
+  else { $('badgeAprov').style.display='none'; }
+};
+
+// ── REATIVAR REGISTRO ARQUIVADO (gestor) ─────────────────────────────
+window.reativarRegistro = async function(tipo, id) {
+  if (!confirm('Reativar este registro?')) return;
+  const colMap = { carga:'cargas', motorista:'motoristas', transportadora:'transportadoras' };
+  await updateDoc(doc(db, colMap[tipo], id), { arquivado: false, arquivadoEm: null });
+  if (tipo==='carga') loadCargas();
+  if (tipo==='motorista') loadMotoristas();
+  if (tipo==='transportadora') loadTransportadoras();
+};
+
+
+// ─── INICIALIZAÇÃO ───────────────────────────────────────
+async function boot() {
+  // Diagnóstico visual — mostra qualquer erro na tela
+  window.onerror = function(msg, src, line, col, err) {
+    const splash = document.getElementById('splash');
+    if (splash) {
+      splash.innerHTML = `<div style="padding:20px;color:white;font-size:12px;text-align:left;word-break:break-all;">
+        <div style="font-size:18px;margin-bottom:12px;">⚠️ Erro detectado</div>
+        <div style="color:#f59e0b;margin-bottom:8px;">${msg}</div>
+        <div style="color:#6b7db3;">Linha: ${line} · Col: ${col}</div>
+        <div style="color:#6b7db3;margin-top:8px;">${src}</div>
+        <div style="margin-top:16px;"><button onclick="location.reload()" style="background:#6c3bfc;color:white;border:none;padding:10px 20px;border-radius:8px;font-size:14px;">Tentar novamente</button></div>
+      </div>`;
+    }
+    return true;
+  };
+  // Inicializar Firebase
+  if (!initFirebase()) {
+    setTimeout(() => {
+      document.getElementById('splash').classList.add('hide');
+      document.getElementById('authLogin').classList.add('on');
+      const box = document.querySelector('#authLogin .auth-box');
+      if (box) {
+        const err = document.createElement('div');
+        err.className = 'msg-err';
+        err.style.display = 'block';
+        err.textContent = '⚠️ Erro ao conectar com o Firebase. Verifique sua internet.';
+        box.insertBefore(err, box.firstChild);
+      }
+    }, 2400);
+    return;
+  }
+  // Timeout de segurança — jamais fica preso na splash
+  const safetyTimer = setTimeout(() => {
+    $('splash').classList.add('hide');
+    showScreen('authLogin');
+  }, 3000);
+
+  function sairSplash(fn) {
+    clearTimeout(safetyTimer);
+    $('splash').classList.add('hide');
+    fn();
+  }
+
+  try {
+    const savedId = localStorage.getItem('dya_user_id');
+    if (savedId) {
+      const d = await getDoc(doc(db,'usuarios',savedId));
+      if (d.exists()) {
+        const data = d.data();
+        if (data.status==='aprovado'||data.status==='ativo'||data.perfil==='gestor') {
+          if (data.primeiroAcesso) {
+            currentUser = { id:d.id, ...data };
+            sairSplash(() => showScreen('authPrimeiroAcesso'));
+            return;
+          }
+          currentUser = { id:d.id, ...data };
+          sairSplash(() => initApp());
+          return;
+        }
+      }
+      localStorage.removeItem('dya_user_id');
+    }
+
+    // Sem sessão — verificar/criar gestor padrão
+    const snap = await getDocs(query(collection(db,'usuarios'), where('perfil','==','gestor')));
+    if (snap.empty) {
+      await addDoc(collection(db,'usuarios'), {
+        nome: 'Diego Costa Chaves',
+        apelido: 'Diego',
+        email: 'dcchaves25@gmail.com',
+        telefone: '',
+        cargo: 'Gestor de Logística',
+        cidade: 'Fortaleza',
+        perfil: 'gestor',
+        status: 'aprovado',
+        primeiroAcesso: false,
+        criadoEm: serverTimestamp()
+      });
+    }
+    sairSplash(() => showScreen('authLogin'));
+
+  } catch(e) {
+    console.error('Boot error:', e);
+    // Se Firebase falhar (offline, erro de rede), mostra login mesmo assim
+    clearTimeout(safetyTimer);
+    setTimeout(() => {
+      $('splash').classList.add('hide');
+      // Mostrar alerta de conexão
+      const loginBox = document.querySelector('#authLogin .auth-box');
+      if (loginBox) {
+        const alerta = document.createElement('div');
+        alerta.className = 'msg-err';
+        alerta.style.display = 'block';
+        alerta.textContent = '⚠️ Problema de conexão com o servidor. Verifique sua internet e tente novamente.';
+        loginBox.insertBefore(alerta, loginBox.firstChild);
+      }
+      showScreen('authLogin');
+    }, 2400);
+  }
+}
+
+boot();
+
+</script>
+</html>
