@@ -1403,11 +1403,13 @@ window.toggleQuarta = function() {
 // ─── HOME ────────────────────────────────────────────────
 async function loadHome() {
   // KPIs
-  const [cargasSnap, motSnap, cteSnap] = await Promise.all([
+  const [cargasSnap, motSnap, ctePendSnap, cteDivSnap] = await Promise.all([
     getDocs(collection(db,'cargas')),
     getDocs(query(collection(db,'motoristas'), where('status','==','ativo'))),
-    getDocs(query(collection(db,'ctes'), where('status','in',['pendente','divergencia'])))
+    getDocs(query(collection(db,'ctes'), where('status','==','pendente'))),
+    getDocs(query(collection(db,'ctes'), where('status','==','divergencia')))
   ]);
+  const cteSnap = { size: ctePendSnap.size + cteDivSnap.size, docs: [...ctePendSnap.docs, ...cteDivSnap.docs] };
   const cargas = cargasSnap.docs.map(d=>({id:d.id,...d.data()}));
   const ativas = cargas.filter(c=>c.status==='em_transito'||c.status==='planejada').length;
   const provs = cargas.filter(c=>c.status==='provisoria').length;
@@ -2345,7 +2347,7 @@ window.resolverDivergencia = async function(cteId) {
 async function loadRecibos() {
   $('recibosList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
   // Entregas sem recibo
-  const cargasSnap = await getDocs(query(collection(db,'cargas'), where('status','in',['em_transito','concluida'])));
+  const cargasSnap = await getDocs(collection(db,'cargas'));
   let semRecibo = [];
   for (const cargaDoc of cargasSnap.docs) {
     const clSnap = await getDocs(query(collection(db,'cargas',cargaDoc.id,'clientes'), where('status','==','entregue')));
@@ -2482,7 +2484,7 @@ async function loadDashboard() {
   const [cargasSnap, motSnap, cteSnap, pesqSnap, nfesSnap] = await Promise.all([
     getDocs(collection(db,'cargas')),
     getDocs(query(collection(db,'motoristas'), where('status','==','ativo'))),
-    getDocs(query(collection(db,'ctes'), where('status','in',['pendente','divergencia']))),
+    getDocs(query(collection(db,'ctes'), where('status','==','pendente'))),
     getDocs(collection(db,'pesquisas')),
     getDocs(collection(db,'nfes'))
   ]);
