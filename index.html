@@ -231,6 +231,194 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:var(--t
 /* ARQUIVADOS */
 .archived-banner{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 14px;margin:8px 16px;display:flex;align-items:center;gap:10px;}
 
+
+/* ─── LAYOUT DESKTOP (>=768px) ────────────────────────────────────── */
+@media (min-width: 768px) {
+  body {
+    max-width: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  /* Splash centralizado */
+  .splash {
+    max-width: 100%;
+  }
+  /* Auth centralizado */
+  .auth-wrap {
+    max-width: 100%;
+  }
+  /* App shell */
+  .app {
+    flex-direction: row;
+    min-height: 100vh;
+    max-width: 100%;
+  }
+  /* Header vira sidebar */
+  .hdr {
+    display: none;
+  }
+  /* Sidebar */
+  .bnav {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 220px;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 0;
+    border-top: none;
+    border-right: .5px solid var(--border);
+    transform: none;
+    max-width: 220px;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  /* Logo no topo da sidebar */
+  .bnav::before {
+    content: '';
+    display: block;
+    height: 64px;
+    background: var(--card);
+    border-bottom: .5px solid var(--border);
+    flex-shrink: 0;
+  }
+  .ni {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 12px 20px;
+    gap: 12px;
+    border-top: none;
+    border-left: 3px solid transparent;
+    width: 100%;
+  }
+  .ni.on {
+    border-top-color: transparent;
+    border-left-color: var(--p1);
+    background: rgba(108,59,252,.06);
+  }
+  .ni-i {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+  }
+  .ni-l {
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .ni.on .ni-l {
+    font-size: 13px;
+  }
+  .badge-n {
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  /* Conteúdo principal */
+  .scr {
+    margin-left: 220px;
+    padding-bottom: 0;
+    min-height: 100vh;
+    max-width: calc(100vw - 220px);
+  }
+  /* FAB */
+  .fab {
+    bottom: 24px;
+    right: 24px;
+    transform: none;
+    left: auto;
+  }
+  .fab:active {
+    transform: scale(.95);
+  }
+  /* KPI grid maior */
+  .kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  /* Modais centralizados */
+  .modal-bg {
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+  }
+  .modal {
+    border-radius: 20px;
+    max-width: 520px;
+    width: 90%;
+    margin: 0 auto;
+  }
+  /* Diff de aprovações lado a lado */
+  .aprov-diff {
+    grid-template-columns: 1fr 1fr;
+  }
+  /* Listas mais espaçadas */
+  .li {
+    padding: 14px 24px;
+  }
+  .sec {
+    padding: 16px 24px;
+  }
+  .det-hdr {
+    padding: 24px 24px 16px;
+  }
+  .det-acts {
+    padding: 14px 24px;
+  }
+  .kpi-grid {
+    padding: 16px 24px;
+  }
+  .tabs {
+    padding: 0 24px;
+  }
+  /* Header desktop no topo da sidebar */
+  .desktop-sidebar-header {
+    display: flex !important;
+  }
+}
+
+/* Sidebar header desktop */
+.desktop-sidebar-header {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 220px;
+  height: 64px;
+  background: var(--card);
+  border-right: .5px solid var(--border);
+  border-bottom: .5px solid var(--border);
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  z-index: 100;
+}
+/* Desktop top bar */
+.desktop-topbar {
+  display: none;
+}
+@media (min-width: 768px) {
+  .desktop-topbar {
+    display: flex;
+    position: fixed;
+    left: 220px;
+    top: 0;
+    right: 0;
+    height: 56px;
+    background: rgba(13,18,37,.97);
+    backdrop-filter: blur(10px);
+    border-bottom: .5px solid var(--border);
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    z-index: 50;
+  }
+  .scr {
+    padding-top: 56px;
+  }
+}
+
 </style>
   </head>
 <body>
@@ -311,6 +499,7 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:var(--t
 
 <!-- APP PRINCIPAL -->
 <div class="app" id="appMain">
+  <!-- Header mobile -->
   <div class="hdr">
     <div class="hdr-l">
       <button class="bk-btn" id="bkBtn" onclick="goBack()">←</button>
@@ -322,6 +511,26 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:var(--t
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
       <div id="userAv" class="user-av" onclick="goTo('usuarios')" title="Minha conta"></div>
+    </div>
+  </div>
+
+  <!-- Sidebar header desktop -->
+  <div class="desktop-sidebar-header">
+    <div class="hdr-icon">DYA</div>
+    <div>
+      <div class="hdr-brand">DYA SOLUÇÕES</div>
+      <div style="font-size:10px;color:var(--muted);">Logística & Gestão</div>
+    </div>
+  </div>
+
+  <!-- Top bar desktop -->
+  <div class="desktop-topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="bk-btn on" id="bkBtnDesktop" onclick="goBack()" style="display:none;">←</button>
+      <div class="hdr-title" id="hdrTitleDesktop">Início</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div id="userAvDesktop" class="user-av" onclick="goTo('usuarios')" title="Minha conta"></div>
     </div>
   </div>
 
@@ -1062,11 +1271,17 @@ function showErr(id, msg) {
 async function initApp() {
   hideAllAuth();
   $('appMain').classList.add('on');
-  // Avatar do usuário
+  // Avatar do usuário (mobile e desktop)
   const av = $('userAv');
   av.textContent = initials(currentUser.nome||currentUser.email);
   av.style.background = avatarColor(currentUser.nome);
   av.style.color = '#fff';
+  const avD = $('userAvDesktop');
+  if (avD) {
+    avD.textContent = initials(currentUser.nome||currentUser.email);
+    avD.style.background = avatarColor(currentUser.nome);
+    avD.style.color = '#fff';
+  }
   // Ocultar nav de usuários se não for gestor
   if (currentUser.perfil !== 'gestor') {
     $('ni-usuarios').style.display = 'none';
@@ -1109,6 +1324,11 @@ window.goTo = function(screen) {
   const scr = screenMap[screen];
   if (scr) $(scr).classList.add('on');
   $('hdrTitle').textContent = titleMap[screen] || screen;
+  const titleD = $('hdrTitleDesktop');
+  if (titleD) titleD.textContent = titleMap[screen] || screen;
+  // Back button desktop
+  const bkD = $('bkBtnDesktop');
+  if (bkD) bkD.style.display = backScreens.includes(screen) ? 'flex' : 'none';
   // Back button
   const backScreens = ['cargaDet','motosDet'];
   $('bkBtn').classList.toggle('on', backScreens.includes(screen));
