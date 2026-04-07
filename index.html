@@ -1402,22 +1402,27 @@ window.toggleQuarta = function() {
 
 // ─── HOME ────────────────────────────────────────────────
 async function loadHome() {
-  // KPIs — buscar com timeout para não travar
+  // Timeout helper — nunca trava
+  const withTimeout = (promise, ms=8000) => Promise.race([
+    promise,
+    new Promise(r => setTimeout(() => r({ docs:[], size:0, forEach:()=>{} }), ms))
+  ]);
   const safeGet = async (ref) => {
-    try { return await getDocs(ref); } 
+    try { return await withTimeout(getDocs(ref)); }
     catch(e) { return { docs:[], size:0, forEach:()=>{} }; }
   };
-  const [cargasSnap, motSnap, ctePendSnap, cteDivSnap] = await Promise.all([
+
+  // Mostrar KPI vazio imediatamente enquanto carrega
+  $('kpiGrid').innerHTML = '<div class="loading" style="grid-column:1/-1"><div class="spin"></div> Carregando...</div>';
+
+  const [cargasSnap, motSnap] = await Promise.all([
     safeGet(collection(db,'cargas')),
-    safeGet(collection(db,'motoristas')),
-    safeGet(collection(db,'ctes')),
-    safeGet(collection(db,'aprovacoes'))
+    safeGet(collection(db,'motoristas'))
   ]);
-  // Filtrar localmente — evita queries com where que podem falhar
+
   const motAtivos = motSnap.docs.filter(d=>d.data().status==='ativo');
-  const ctePend = ctePendSnap.docs.filter(d=>['pendente','divergencia'].includes(d.data().status));
-  const aprovPend = cteDivSnap.docs.filter(d=>d.data().status==='pendente');
-  const cteSnap = { size: ctePend.length, docs: ctePend };
+  const aprovPend = [];
+  const cteSnap = { size: 0, docs: [] };
   const cargas = cargasSnap.docs.map(d=>({id:d.id,...d.data()}));
   const ativas = cargas.filter(c=>c.status==='em_transito'||c.status==='planejada').length;
   const provs = cargas.filter(c=>c.status==='provisoria').length;
@@ -1432,17 +1437,19 @@ async function loadHome() {
   // Badge CTE
   if (cteSnap.size > 0) { $('badgeCte').style.display='flex'; $('badgeCte').textContent=cteSnap.size; }
   // Banner pending users
+  // Badges assíncronos — não bloqueiam o carregamento
   if (currentUser.perfil==='gestor') {
-    const usuSnap = await safeGet(collection(db,'usuarios'));
-    const pendSnap = { size: usuSnap.docs.filter(d=>d.data().status==='pendente_aprovacao').length, docs: usuSnap.docs.filter(d=>d.data().status==='pendente_aprovacao') };
-    // Badge de aprovações pendentes
-    if (aprovPend.length > 0) {
-      $('badgeAprov').style.display='flex'; $('badgeAprov').textContent=aprovPend.length;
-    }
-    if (pendSnap.size > 0) {
-      $('pendingBanner').innerHTML = `<div class="notice" onclick="goTo('usuarios')"><span style="font-size:18px;">👥</span><div class="notice-text"><strong>${pendSnap.size} solicitação(ões) de acesso</strong> aguardando aprovação.</div><span style="color:var(--amber);">Ver →</span></div>`;
-      $('badgeUser').style.display='flex'; $('badgeUser').textContent=pendSnap.size;
-    }
+    safeGet(collection(db,'usuarios')).then(usuSnap => {
+      const pendentes = usuSnap.docs.filter(d=>d.data().status==='pendente_aprovacao');
+      if (pendentes.length > 0) {
+        $('pendingBanner').innerHTML = `<div class="notice" onclick="goTo('usuarios')"><span style="font-size:18px;">👥</span><div class="notice-text"><strong>${pendentes.length} solicitação(ões) de acesso</strong> aguardando aprovação.</div><span style="color:var(--amber);">Ver →</span></div>`;
+        $('badgeUser').style.display='flex'; $('badgeUser').textContent=pendentes.length;
+      }
+    });
+    safeGet(collection(db,'aprovacoes')).then(aprovSnap => {
+      const pend = aprovSnap.docs.filter(d=>d.data().status==='pendente');
+      if (pend.length > 0) { $('badgeAprov').style.display='flex'; $('badgeAprov').textContent=pend.length; }
+    });
   }
   // Cargas recentes
   const recentes = cargas.filter(c=>c.status!=='concluida'&&!c.arquivado).slice(0,3);
