@@ -1326,12 +1326,12 @@ window.goTo = function(screen) {
   $('hdrTitle').textContent = titleMap[screen] || screen;
   const titleD = $('hdrTitleDesktop');
   if (titleD) titleD.textContent = titleMap[screen] || screen;
-  // Back button desktop
-  const bkD = $('bkBtnDesktop');
-  if (bkD) bkD.style.display = backScreens.includes(screen) ? 'flex' : 'none';
   // Back button
   const backScreens = ['cargaDet','motosDet'];
   $('bkBtn').classList.toggle('on', backScreens.includes(screen));
+  // Back button desktop
+  const bkD = $('bkBtnDesktop');
+  if (bkD) bkD.style.display = backScreens.includes(screen) ? 'flex' : 'none';
   // Nav highlight
   Object.entries(navMap).forEach(([k,v]) => { $(v).classList.toggle('on', k===screen); });
   // FAB
