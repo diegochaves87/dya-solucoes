@@ -3277,28 +3277,33 @@ window.confirmarUnificacao = async function() {
 
 // ─── BASE DE LOCAIS DE ENTREGA ────────────────────────────────────────────
 window.abrirLocalEntrega = async function(clienteId, cargaId) {
-  $('leClienteId').value = clienteId;
-  $('leCargaId').value = cargaId;
-  ['leNome','leEndereco','leCidade','leContato'].forEach(id=>$(id).value='');
-  $('leUF').value = '';
-
-  // Carregar locais cadastrados
-  const snap = await getDocs(collection(db,'locais_entrega'));
-  const locais = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
-  const lista = $('localEntregaLista');
-  if (locais.length === 0) {
-    lista.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:12px;">Nenhum local cadastrado. Cadastre abaixo.</div>';
-  } else {
-    lista.innerHTML = locais.map(l=>`
-      <div class="li" style="padding:10px 14px;" onclick="selecionarLocalEntrega('${l.id}','${(l.nome||'').replace(/'/g,"\'")}','${l.cidade||''}','${l.uf||''}')">
-        <div class="li-body">
-          <div class="li-title" style="font-size:13px;">${l.nome}</div>
-          <div class="li-sub">${l.cidade||'—'}/${l.uf||'—'} · ${l.endereco||''}</div>
-        </div>
-        <div class="li-right"><span style="font-size:11px;color:var(--p2);">Selecionar →</span></div>
-      </div>`).join('');
-  }
-  openModal('modalLocalEntrega');
+  try {
+    $('leClienteId').value = clienteId;
+    $('leCargaId').value = cargaId;
+    ['leNome','leEndereco','leCidade','leContato'].forEach(i=>$(i).value='');
+    $('leUF').value = '';
+    const lista = $('localEntregaLista');
+    lista.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+    openModal('modalLocalEntrega');
+    // Carregar locais cadastrados
+    let locais = [];
+    try {
+      const snap = await getDocs(collection(db,'locais_entrega'));
+      locais = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+    } catch(e2) { locais = []; }
+    if (locais.length === 0) {
+      lista.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:12px;">Nenhum local cadastrado ainda. Cadastre abaixo.</div>';
+    } else {
+      lista.innerHTML = locais.map(l=>`
+        <div class="li" style="padding:10px 14px;cursor:pointer;" onclick="selecionarLocalEntrega('${l.id}','${(l.nome||'').replace(/'/g,"\'")}','${l.cidade||''}','${l.uf||''}')">
+          <div class="li-body">
+            <div class="li-title" style="font-size:13px;">${l.nome}</div>
+            <div class="li-sub">${l.cidade||'—'}/${l.uf||'—'} · ${l.endereco||''}</div>
+          </div>
+          <div class="li-right"><span style="font-size:11px;color:var(--p2);">Selecionar →</span></div>
+        </div>`).join('');
+    }
+  } catch(e) { alert('Erro ao abrir locais: ' + e.message); }
 };
 
 window.selecionarLocalEntrega = async function(localId, nome, cidade, uf) {
