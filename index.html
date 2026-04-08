@@ -725,6 +725,7 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:var(--t
         <option value="NORTE">Norte</option>
       </select>
     </div>
+    <div class="fld"><label>Número da NF (se disponível)</label><input type="text" id="clNumeroNF" placeholder="Ex: 151724"></div>
     <div class="fld"><label>Peso Líquido estimado (kg)</label><input type="number" id="clPesoLiq" placeholder="0" oninput="calcPrecoMedio()"></div>
     <div class="fld"><label>Valor estimado da carga (R$)</label><input type="number" id="clValorNF" placeholder="0,00" oninput="calcPrecoMedio()"></div>
     <div style="background:rgba(108,59,252,.08);border:1px solid rgba(108,59,252,.2);border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
@@ -1666,7 +1667,7 @@ window.abrirNovoCliente = function(cargaId) {
   currentCargaId = cargaId;
   $('clEditId').value = '';
   $('modalClienteTitle').innerHTML = 'Adicionar Cliente <button class="modal-close" onclick="closeModal(\'modalNovoCliente\')">×</button>';
-  ['clBusca','clNome','clCNPJ','clCidade','clAgendNum','clObs'].forEach(id=>$(id).value='');
+  ['clBusca','clNome','clCNPJ','clCidade','clAgendNum','clObs','clNumeroNF'].forEach(id=>$(id).value='');
   ['clUF','clRegiao'].forEach(id=>$(id).value='');
   ['clPesoLiq','clValorNF'].forEach(id=>$(id).value='');
   $('clPrecoMedio').textContent='—';
@@ -1697,8 +1698,10 @@ window.salvarNovoCliente = async function() {
   }
 
   const precoMedio = pesoLiq>0 ? valorNF/pesoLiq : 0;
+  const numeroNF = $('clNumeroNF') ? $('clNumeroNF').value.trim() : '';
   const dadosCliente = {
     nome, cnpj, cidade, uf, regiao, pesoLiq, valorNF, precoMedio,
+    numeroNF,
     previsao: $('clPrevisao').value ? Timestamp.fromDate(new Date($('clPrevisao').value+'T12:00:00')) : null,
     agendNum: $('clAgendNum').value.trim(),
     agendData: $('clAgendData').value||null,
@@ -2150,6 +2153,7 @@ window.abrirCarga = async function(id) {
               <div style="font-size:11px;"><span style="color:var(--muted);">Rateio: </span><strong style="color:var(--amber);">${fmtMoeda(rateio)}</strong></div>
             </div>
             ${cl.previsao?`<div style="font-size:11px;margin-top:4px;color:var(--muted);">Previsão: ${fmtData(cl.previsao)}${cl.agendNum?' · Agend: '+cl.agendNum:''}</div>`:''}
+            ${cl.numeroNF?`<div style="font-size:11px;color:var(--p2);margin-top:2px;">NF: ${cl.numeroNF}</div>`:''}
             ${cl.obs?`<div style="font-size:11px;color:var(--muted);margin-top:2px;">Obs: ${cl.obs}</div>`:''}
             ${nfesHTML}
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${clActs}</div>
@@ -2160,7 +2164,8 @@ window.abrirCarga = async function(id) {
   }
 
   // Total resumo
-  const precoMedioGeral = totalKgClientes>0 ? (clientes.reduce((s,cl)=>s+Number(cl.valorNF||cl.valorNFe||0),0)/totalKgClientes).toFixed(2) : '—';
+  const totalValorClientes = clientes.reduce((s,cl)=>s+Number(cl.valorNF||cl.valorNFe||0),0);
+  const precoMedioGeral = totalKgClientes>0 ? (totalValorClientes/totalKgClientes).toFixed(2) : '—';
 
   $('cargaDetContent').innerHTML = `
     ${provBanner}
@@ -2177,7 +2182,7 @@ window.abrirCarga = async function(id) {
       <div class="row"><span class="row-k">Tipo · Frete</span><span class="row-v">${c.tipoCarga||'—'} · ${c.frete||'—'}</span></div>
       <div class="row"><span class="row-k">Valor frete global</span><span class="row-v">${fmtMoeda(c.valorFrete)}</span></div>
       <div class="row"><span class="row-k">Peso líq. total</span><span class="row-v">${fmtKg(totalKgClientes)}</span></div>
-      <div class="row"><span class="row-k">R$/kg médio</span><span class="row-v">R$ ${typeof precoMedioGeral==='string'?precoMedioGeral:precoMedioGeral+'/kg'}</span></div>
+      <div class="row"><span class="row-k">R$/kg médio</span><span class="row-v">${precoMedioGeral==='—'?'—':'R$ '+precoMedioGeral+'/kg'}</span></div>
       <div class="row"><span class="row-k">Data saída</span><span class="row-v">${fmtData(c.dataSaida)}</span></div>
     </div>
     <div class="sec">
@@ -2213,6 +2218,7 @@ window.editarCliente = async function(cargaId, clienteId) {
   $('clPrevisao').value = cl.previsao ? cl.previsao.toDate().toISOString().split('T')[0] : '';
   $('clAgendNum').value = cl.agendNum||'';
   $('clObs').value = cl.obs||'';
+  if($('clNumeroNF')) $('clNumeroNF').value = cl.numeroNF||'';
   $('clPrecoMedio').textContent = cl.precoMedio ? 'R$ '+Number(cl.precoMedio).toFixed(2)+'/kg' : '—';
   $('modalClienteTitle').innerHTML = 'Editar Cliente <button class="modal-close" onclick="closeModal(\'modalNovoCliente\')">×</button>';
   $('clBusca').value = '';
