@@ -1395,16 +1395,24 @@ window.closeModal = function(id) { $(id).classList.remove('on'); };
 // ─── LOAD SELECT HELPERS ─────────────────────────────────
 async function loadTranspSelectModal(selectId) {
   const sel = $(selectId); if(!sel) return;
-  const snap = await getDocs(query(collection(db,'transportadoras'), where('tipo','==','transportadora')));
-  sel.innerHTML = '<option value="">Selecione...</option>';
-  snap.forEach(d => { sel.innerHTML += `<option value="${d.id}">${d.data().apelido||d.data().nome}</option>`; });
+  try {
+    const snap = await getDocs(collection(db,'transportadoras'));
+    sel.innerHTML = '<option value="">Selecione...</option>';
+    snap.docs.filter(d=>!d.data().tipo||d.data().tipo==='transportadora').forEach(d => {
+      sel.innerHTML += `<option value="${d.id}">${d.data().apelido||d.data().nome}</option>`;
+    });
+  } catch(e) { sel.innerHTML = '<option value="">Erro ao carregar</option>'; }
 }
 
 async function loadMotoristaSelectModal(selectId) {
   const sel = $(selectId); if(!sel) return;
-  const snap = await getDocs(query(collection(db,'motoristas'), where('status','==','ativo')));
-  sel.innerHTML = '<option value="">Selecione...</option>';
-  snap.forEach(d => { sel.innerHTML += `<option value="${d.id}">${d.data().nome}</option>`; });
+  try {
+    const snap = await getDocs(collection(db,'motoristas'));
+    sel.innerHTML = '<option value="">Selecione...</option>';
+    snap.docs.filter(d=>!d.data().status||d.data().status==='ativo').forEach(d => {
+      sel.innerHTML += `<option value="${d.id}">${d.data().nome}</option>`;
+    });
+  } catch(e) { sel.innerHTML = '<option value="">Erro ao carregar</option>'; }
 }
 
 window.toggleQuarta = function() {
@@ -2838,20 +2846,22 @@ async function criarSolicitacao(tipo, acao, entidade, entidadeId, dadosAntes, da
 
 // ── ABRIR MODAL EDITAR CARGA ─────────────────────────────────────────
 window.abrirEditarCarga = async function(id) {
-  const d = await getDoc(doc(db,'cargas',id));
-  const c = d.data();
-  $('ecId').value = id;
-  $('ecEmbarque').value = c.embarque||'';
-  $('ecRota').value = c.rota||'';
-  $('ecData').value = c.dataSaida ? c.dataSaida.toDate().toISOString().split('T')[0] : '';
-  $('ecTipoCarga').value = c.tipoCarga||'Paletizada';
-  $('ecFrete').value = c.frete||'CIF';
-  $('ecContratante').value = c.contratante||'Diego Chaves';
-  $('ecValorFrete').value = c.valorFrete||'';
-  $('ecObs').value = c.obs||'';
-  await loadTranspSelectModal('ecTransp'); $('ecTransp').value = c.transportadoraId||'';
-  await loadMotoristaSelectModal('ecMotorista'); $('ecMotorista').value = c.motoristaId||'';
-  openModal('modalEditarCarga');
+  try {
+    const d = await getDoc(doc(db,'cargas',id));
+    const c = d.data() || {};
+    $('ecId').value = id;
+    $('ecEmbarque').value = c.embarque||'';
+    $('ecRota').value = c.rota||'';
+    try { $('ecData').value = c.dataSaida ? c.dataSaida.toDate().toISOString().split('T')[0] : ''; } catch(e2) { $('ecData').value = ''; }
+    $('ecTipoCarga').value = c.tipoCarga||'Paletizada';
+    $('ecFrete').value = c.frete||'CIF';
+    $('ecContratante').value = c.contratante||'Diego Chaves';
+    $('ecValorFrete').value = c.valorFrete||'';
+    $('ecObs').value = c.obs||'';
+    await loadTranspSelectModal('ecTransp'); $('ecTransp').value = c.transportadoraId||'';
+    await loadMotoristaSelectModal('ecMotorista'); $('ecMotorista').value = c.motoristaId||'';
+    openModal('modalEditarCarga');
+  } catch(e) { alert('Erro ao abrir edição: ' + e.message); console.error(e); }
 };
 
 // ── ABRIR MODAL EDITAR MOTORISTA ─────────────────────────────────────
@@ -3368,4 +3378,4 @@ async function boot() {
 boot();
 
 </script>
-</html>  
+</html>
