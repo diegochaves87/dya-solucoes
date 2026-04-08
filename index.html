@@ -621,6 +621,10 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:var(--t
   </div>
 
   <!-- TELA: USUÁRIOS -->
+  <div class="scr" id="scrClientes">
+    <div id="clientesList"><div class="loading"><div class="spin"></div></div></div>
+  </div>
+
   <div class="scr" id="scrUsuarios">
     <div id="usuariosList"><div class="loading"><div class="spin"></div> Carregando...</div></div>
   </div>
@@ -637,6 +641,7 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:var(--t
     <div class="ni" id="ni-ctes" onclick="goTo('ctes')"><div class="ni-i">📄</div><div class="ni-l">CTEs</div><div class="badge-n" id="badgeCte" style="display:none"></div></div>
     <div class="ni" id="ni-dashboard" onclick="goTo('dashboard')"><div class="ni-i">📊</div><div class="ni-l">Dashboard</div></div>
     <div class="ni" id="ni-aprovacoes" onclick="goTo('aprovacoes')" style="display:none;"><div class="ni-i">✅</div><div class="ni-l">Aprovações</div><div class="badge-n" id="badgeAprov" style="display:none"></div></div>
+    <div class="ni" id="ni-clientes" onclick="goTo('clientes')"><div class="ni-i">🏭</div><div class="ni-l">Clientes</div></div>
     <div class="ni" id="ni-usuarios" onclick="goTo('usuarios')"><div class="ni-i">👥</div><div class="ni-l">Usuários</div><div class="badge-n" id="badgeUser" style="display:none"></div></div>
   </nav>
 </div>
@@ -1304,7 +1309,7 @@ const screenMap = {
   motoristas:'scrMotoristas', motosDet:'scrMotoristaDet',
   transportadoras:'scrTransportadoras', aprovacoes:'scrAprovacoes', ctes:'scrCtes',
   recibos:'scrRecibos', pesquisas:'scrPesquisas',
-  dashboard:'scrDashboard', usuarios:'scrUsuarios'
+  dashboard:'scrDashboard', clientes:'scrClientes', usuarios:'scrUsuarios'
 };
 
 const titleMap = {
@@ -1312,10 +1317,10 @@ const titleMap = {
   motoristas:'Motoristas', motosDet:'Motorista',
   transportadoras:'Transportadoras', aprovacoes:'Aprovações', ctes:'CTEs',
   recibos:'Recibos', pesquisas:'Pesquisas',
-  dashboard:'Dashboard', usuarios:'Usuários'
+  dashboard:'Dashboard', clientes:'Base de Clientes', usuarios:'Usuários'
 };
 
-const navMap = { home:'ni-home', cargas:'ni-cargas', motoristas:'ni-motoristas', transportadoras:'ni-transportadoras', aprovacoes:'ni-aprovacoes', ctes:'ni-ctes', dashboard:'ni-dashboard', usuarios:'ni-usuarios' };
+const navMap = { home:'ni-home', cargas:'ni-cargas', motoristas:'ni-motoristas', transportadoras:'ni-transportadoras', aprovacoes:'ni-aprovacoes', ctes:'ni-ctes', dashboard:'ni-dashboard', clientes:'ni-clientes', usuarios:'ni-usuarios' };
 
 window.goTo = function(screen) {
   prevScreen = currentScreen;
@@ -1335,7 +1340,7 @@ window.goTo = function(screen) {
   // Nav highlight
   Object.entries(navMap).forEach(([k,v]) => { $(v).classList.toggle('on', k===screen); });
   // FAB
-  const fabScreens = ['cargas','motoristas','transportadoras','usuarios'];
+  const fabScreens = ['cargas','motoristas','transportadoras','clientes','usuarios'];
   $('fabBtn').style.display = fabScreens.includes(screen) ? 'flex' : 'none';
   // Load
   if (screen==='home') loadHome();
@@ -1347,6 +1352,7 @@ window.goTo = function(screen) {
   if (screen==='recibos') loadRecibos();
   if (screen==='pesquisas') loadPesquisas();
   if (screen==='dashboard') loadDashboard();
+  if (screen==='clientes') loadClientes();
   if (screen==='usuarios') loadUsuarios();
 };
 
@@ -1362,6 +1368,7 @@ window.openFab = function() {
   if (currentScreen==='cargas') openModal('modalNovaCarga');
   if (currentScreen==='motoristas') { loadTranspSelectModal('mtTransp'); openModal('modalNovoMotorista'); }
   if (currentScreen==='transportadoras') { loadTranspSelectModal('trRefTransp'); openModal('modalNovaTransp'); }
+  if (currentScreen==='clientes') { openModal('modalClienteBase'); return; }
   if (currentScreen==='usuarios') {
     if (currentUser.perfil!=='gestor') { alert('Apenas o gestor pode convidar usuários.'); return; }
     openModal('modalConvidarUser');
@@ -1479,7 +1486,7 @@ async function loadCargas() {
   if (cargaFiltro==='provisorias') cargas = cargas.filter(c=>c.status==='provisoria');
   if (cargaFiltro==='concluidas') cargas = cargas.filter(c=>c.status==='concluida');
   if (cargas.length===0) { $('cargasList').innerHTML='<div class="empty"><div class="empty-i">🚛</div><div class="empty-t">Nenhuma carga</div><div class="empty-s">Toque no + para criar</div></div>'; return; }
-  $('cargasList').innerHTML = cargas.map(c=>`
+  $('cargasList').innerHTML = '<div style="padding:10px 16px;display:flex;justify-content:flex-end;"><button class="btn-sm btn-blue" onclick="exportarCargas()">📥 Exportar CSV</button></div>' + cargas.map(c=>`
     <div class="li" onclick="abrirCarga('${c.id}')">
       <div class="av" style="background:${c.status==='provisoria'?'rgba(245,158,11,.15)':'rgba(108,59,252,.15)'};">${c.status==='provisoria'?'📋':'🚛'}</div>
       <div class="li-body">
@@ -1810,7 +1817,59 @@ window.gerarRomaneio = async function(cargaId) {
     <div style="font-size:11px;color:#9ca3af;text-align:right;">DYA Soluções · Maris Pescados<br>${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
   </div>
   
-  </body></html>`;
+  
+<!-- Modal: Cadastrar Cliente Base -->
+<div class="modal-bg" id="modalClienteBase">
+  <div class="modal">
+    <div class="modal-title">Cadastrar Cliente <button class="modal-close" onclick="closeModal('modalClienteBase')">×</button></div>
+    <div class="alert alert-b" style="margin:0 0 12px;font-size:12px;">A base de clientes é usada para busca automática ao lançar cargas.</div>
+    <div class="fld"><label>Razão Social *</label><input type="text" id="cbNome" placeholder="Nome completo da empresa"></div>
+    <div class="fld"><label>CNPJ</label><input type="text" id="cbCNPJ" placeholder="00.000.000/0001-00"></div>
+    <div class="fld"><label>Cidade</label><input type="text" id="cbCidade" placeholder="Ex: São Paulo"></div>
+    <div class="fld"><label>UF</label>
+      <select id="cbUF">
+        <option value="">Selecione...</option>
+        <option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option>
+        <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+        <option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option>
+        <option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
+        <option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option>
+        <option>SP</option><option>TO</option>
+      </select>
+    </div>
+    <div class="fld"><label>Região</label>
+      <select id="cbRegiao">
+        <option value="">Selecione...</option>
+        <option value="NORDESTE">Nordeste</option>
+        <option value="SUDESTE">Sudeste</option>
+        <option value="SUL">Sul</option>
+        <option value="CENTRO-OESTE">Centro-Oeste</option>
+        <option value="NORTE">Norte</option>
+      </select>
+    </div>
+    <div class="fld"><label>Telefone / Contato</label><input type="tel" id="cbTel" placeholder="(00) 99999-9999"></div>
+    <input type="hidden" id="cbId">
+    <button class="btn btn-grad" onclick="salvarClienteBase()">Salvar cliente</button>
+  </div>
+</div>
+
+<!-- Modal: Editar NFe -->
+<div class="modal-bg" id="modalEditarNFe">
+  <div class="modal">
+    <div class="modal-title">Editar NFe <button class="modal-close" onclick="closeModal('modalEditarNFe')">×</button></div>
+    <div class="fld"><label>Número da NFe</label><input type="text" id="enNFe"></div>
+    <div class="fld"><label>Data de faturamento</label><input type="date" id="enDataFat"></div>
+    <div class="fld"><label>Valor da NFe (R$)</label><input type="number" id="enValorNFe"></div>
+    <div class="fld"><label>Peso Líquido (kg)</label><input type="number" id="enPesoLiq"></div>
+    <div class="fld"><label>Peso Bruto (kg)</label><input type="number" id="enPesoBruto"></div>
+    <div class="fld"><label>Observações</label><textarea id="enObs"></textarea></div>
+    <input type="hidden" id="enId">
+    <input type="hidden" id="enCargaId">
+    <button class="btn btn-grad" onclick="salvarEdicaoNFe()">Salvar alterações</button>
+  </div>
+</div>
+
+</body></html>`;
 
   const w = window.open('','_blank');
   w.document.write(html);
@@ -1932,8 +1991,15 @@ window.salvarNFe = async function() {
 window.confirmarAtivacao = async function() {
   if (nfesTemp.length===0) { alert('Lance pelo menos uma NFe antes de ativar.'); return; }
   if (!confirm(`Ativar carga com ${nfesTemp.length} NFe(s) lançada(s)?`)) return;
+  // Consolidar totais das NFes lançadas
+  const totalPesoLiq = nfesTemp.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
+  const totalValorNF = nfesTemp.reduce((s,n)=>s+Number(n.valorNFe||0),0);
+  const precoMedioGeral = totalPesoLiq>0 ? totalValorNF/totalPesoLiq : 0;
   await updateDoc(doc(db,'cargas',currentCargaId), {
     status: 'planejada',
+    pesoLiq: totalPesoLiq,
+    valorTotalNF: totalValorNF,
+    precoMedio: precoMedioGeral,
     ativadoEm: serverTimestamp(),
     ativadoPor: currentUser.id
   });
@@ -2037,7 +2103,7 @@ window.abrirCarga = async function(id) {
         const totalNFValor = nfesCliente.reduce((s,n)=>s+Number(n.valorNFe||0),0);
         nfesHTML = `<div style="margin-top:8px;">
           <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">NFes lançadas (${nfesCliente.length})</div>
-          ${nfesCliente.map(n=>`<div class="nfe-row"><div style="display:flex;justify-content:space-between;"><span><span class="nfe-key">NF </span><span class="nfe-val">${n.nfe}</span></span><span class="nfe-key">${fmtData(n.dataFaturamento)}</span></div><div style="display:flex;justify-content:space-between;margin-top:3px;"><span class="nfe-key">${fmtKg(n.pesoLiq)} · ${fmtMoeda(n.valorNFe)}</span><span style="font-size:11px;color:var(--amber);">Rateio: ${fmtMoeda(n.rateio)}</span></div></div>`).join('')}
+          ${nfesCliente.map((n,ni)=>`<div class="nfe-row"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><span><span class="nfe-key">NF </span><span class="nfe-val">${n.nfe}</span> <span class="nfe-key">${fmtData(n.dataFaturamento)}</span></span>${isOp?`<button class="btn-sm btn-blue" onclick="abrirEditarNFe('${n.__id||''}','${id}')" style="font-size:10px;padding:2px 7px;">✏️</button>`:''}</div><div style="display:flex;justify-content:space-between;margin-top:3px;"><span class="nfe-key">${fmtKg(n.pesoLiq)} · ${fmtMoeda(n.valorNFe)}</span><span style="font-size:11px;color:var(--amber);">Rateio: ${fmtMoeda(n.rateio)}</span></div></div>`).join('')}
           <div style="display:flex;justify-content:space-between;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:6px;margin-top:4px;font-size:12px;font-weight:600;">
             <span style="color:var(--muted);">Total consolidado</span>
             <span style="color:var(--text);">${fmtKg(totalNFPeso)} · ${fmtMoeda(totalNFValor)}</span>
@@ -2142,10 +2208,10 @@ window.editarCliente = async function(cargaId, clienteId) {
 // ─── MOTORISTAS ──────────────────────────────────────────
 async function loadMotoristas() {
   $('motoristasList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
-  const snap = await getDocs(query(collection(db,'motoristas'), orderBy('nome')));
+  const snap = await getDocs(collection(db,'motoristas'));
   const mots = snap.docs.map(d=>({id:d.id,...d.data()}));
   if (mots.length===0) { $('motoristasList').innerHTML='<div class="empty"><div class="empty-i">👤</div><div class="empty-t">Nenhum motorista</div><div class="empty-s">Toque no + para cadastrar</div></div>'; return; }
-  $('motoristasList').innerHTML = mots.map(m=>`
+  $('motoristasList').innerHTML = '<div style="padding:10px 16px;display:flex;justify-content:flex-end;"><button class="btn-sm btn-blue" onclick="exportarMotoristas()">📥 Exportar CSV</button></div>' + mots.map(m=>`
     <div class="li" onclick="abrirMotorista('${m.id}')">
       <div class="av" style="background:${avatarColor(m.nome)};color:#fff;">${initials(m.nome)}</div>
       <div class="li-body">
@@ -2270,7 +2336,7 @@ async function loadTransportadoras() {
   const snap = await getDocs(query(collection(db,'transportadoras'), where('tipo','==', transpFiltro==='quartas'?'quarta':'transportadora')));
   const ts = snap.docs.map(d=>({id:d.id,...d.data()}));
   if (ts.length===0) { $('transpList').innerHTML='<div class="empty"><div class="empty-i">🏢</div><div class="empty-t">Nenhuma empresa</div><div class="empty-s">Toque no + para cadastrar</div></div>'; return; }
-  $('transpList').innerHTML = ts.map(t=>`
+  $('transpList').innerHTML = '<div style="padding:10px 16px;display:flex;justify-content:flex-end;"><button class="btn-sm btn-blue" onclick="exportarTransportadoras()">📥 Exportar CSV</button></div>' + ts.map(t=>`
     <div class="li">
       <div class="av" style="background:rgba(59,130,246,.15);color:var(--p2);">🏢</div>
       <div class="li-body">
@@ -2594,6 +2660,8 @@ async function loadDashboard() {
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-sm btn-wa" onclick="waRelatorioExec()">📱 WA Relatório</button>
         <button class="btn-sm btn-blue" onclick="window.print()">🖨️ Imprimir</button>
+        <button class="btn-sm btn-green" onclick="exportarTudo()">📥 Exportar tudo (CSV)</button>
+        <button class="btn-sm btn-purple" onclick="exportarNFes()">📄 Exportar NFes</button>
       </div>
     </div>`;
 }
@@ -2601,8 +2669,9 @@ async function loadDashboard() {
 // ─── USUÁRIOS ────────────────────────────────────────────
 async function loadUsuarios() {
   $('usuariosList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
-  const snap = await getDocs(query(collection(db,'usuarios'), orderBy('criadoEm','desc')));
-  const users = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const snap = await getDocs(collection(db,'usuarios'));
+  const users = snap.docs.map(d=>({id:d.id,...d.data()}))
+    .sort((a,b) => (b.criadoEm && b.criadoEm._ts ? new Date(b.criadoEm._ts) : 0) - (a.criadoEm && a.criadoEm._ts ? new Date(a.criadoEm._ts) : 0));
   const pendentes = users.filter(u=>u.status==='pendente_aprovacao');
   const ativos = users.filter(u=>u.status==='aprovado'||u.status==='ativo');
   const isGestor = currentUser.perfil==='gestor';
@@ -2730,7 +2799,7 @@ window.enviarConviteWA = function() {
   const email = $('invEmail').value.trim();
   const perfil = $('invPerfil').value;
   if (!nome||!tel) { alert('Informe nome e telefone.'); return; }
-  const msg = `Olá, *${nome}*! 👋\n\nVocê foi convidado(a) para acessar o *DYA Soluções*, sistema de gestão logística da Maris Pescados.\n\n📱 *Acesse agora:*\nhttps://dya-solucoes.netlify.app\n\n📧 *Seu e-mail de acesso:* ${email||'(a definir)'}\n👤 *Perfil:* ${perfil}\n\nAo acessar pela primeira vez, complete seu cadastro com seus dados.\n\nQualquer dúvida, entre em contato! 🤝\n_Diego Chaves · DYA Soluções_`;
+  const msg = `Olá, *${nome}*! 👋\n\nVocê foi convidado(a) para acessar o *DYA Soluções*, sistema de gestão logística da Maris Pescados.\n\n📱 *Acesse agora:*\nhttps://diegochaves87.github.io/dya-solucoes/\n\n📧 *Seu e-mail de acesso:* ${email||'(a definir)'}\n👤 *Perfil:* ${perfil}\n\nAo acessar pela primeira vez, complete seu cadastro com seus dados.\n\nQualquer dúvida, entre em contato! 🤝\n_Diego Chaves · DYA Soluções_`;
   const numero = tel.replace(/\D/g,'');
   window.open(`https://wa.me/55${numero}?text=${encodeURIComponent(msg)}`);
   closeModal('modalConvidarUser');
@@ -2996,6 +3065,193 @@ window.reativarRegistro = async function(tipo, id) {
   if (tipo==='carga') loadCargas();
   if (tipo==='motorista') loadMotoristas();
   if (tipo==='transportadora') loadTransportadoras();
+};
+
+
+
+
+// ─── EXPORTAÇÃO ──────────────────────────────────────────────────────────
+function exportarCSV(dados, nomeArquivo) {
+  if (!dados || dados.length === 0) { alert('Nenhum dado para exportar.'); return; }
+  const campos = Object.keys(dados[0]).filter(k => k !== '__id' && !k.startsWith('_'));
+  const header = campos.join(';');
+  const rows = dados.map(d => campos.map(k => {
+    const v = d[k];
+    if (!v) return '';
+    if (v && v.toDate) return v.toDate().toLocaleDateString('pt-BR');
+    if (typeof v === 'object') return JSON.stringify(v).replace(/;/g,'|');
+    return String(v).replace(/;/g,'|').replace(/\n/g,' ');
+  }).join(';'));
+  const csv = '\uFEFF' + header + '\n' + rows.join('\n'); // BOM para Excel
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nomeArquivo + '.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+window.exportarMotoristas = async function() {
+  const snap = await getDocs(collection(db,'motoristas'));
+  const dados = snap.docs.map(d => {
+    const m = d.data();
+    return { Nome: m.nome, CPF: m.cpf, Telefone: m.telefone, 'Placa Cavalo': m.placacavalo, 'Placa Carreta': m.placarreta, 'Val. CNH': m.validadeCNH, Status: m.status, 'Média Avaliação': m.mediaAvaliacao };
+  });
+  exportarCSV(dados, 'motoristas_' + new Date().toISOString().split('T')[0]);
+};
+
+window.exportarTransportadoras = async function() {
+  const snap = await getDocs(collection(db,'transportadoras'));
+  const dados = snap.docs.map(d => {
+    const t = d.data();
+    return { Tipo: t.tipo, Nome: t.nome, Apelido: t.apelido, CNPJ: t.cnpj, Telefone: t.telefone, UF: t.uf };
+  });
+  exportarCSV(dados, 'transportadoras_' + new Date().toISOString().split('T')[0]);
+};
+
+window.exportarClientes = async function() {
+  const snap = await getDocs(collection(db,'clientes_base'));
+  const dados = snap.docs.map(d => {
+    const c = d.data();
+    return { Nome: c.nome, CNPJ: c.cnpj, Cidade: c.cidade, UF: c.uf, Região: c.regiao, Telefone: c.telefone };
+  });
+  exportarCSV(dados, 'clientes_' + new Date().toISOString().split('T')[0]);
+};
+
+window.exportarCargas = async function() {
+  const snap = await getDocs(collection(db,'cargas'));
+  const dados = snap.docs.map(d => {
+    const c = d.data();
+    return { Embarque: c.embarque, Rota: c.rota, Status: c.status, Tipo: c.tipoCarga, Frete: c.frete, 'Valor Frete': c.valorFrete, 'Peso Líq (kg)': c.pesoLiq, 'Valor NF': c.valorTotalNF, 'R$/kg': c.precoMedio, Contratante: c.contratante, 'Data Saída': c.dataSaida };
+  });
+  exportarCSV(dados, 'cargas_' + new Date().toISOString().split('T')[0]);
+};
+
+window.exportarNFes = async function() {
+  const snap = await getDocs(collection(db,'nfes'));
+  const dados = snap.docs.map(d => {
+    const n = d.data();
+    return { Embarque: n.embarque, NFe: n.nfe, Cliente: n.clienteNome, UF: n.uf, Região: n.regiao, 'Peso Líq (kg)': n.pesoLiq, 'Peso Bruto (kg)': n.pesoBruto, 'Valor NFe': n.valorNFe, 'R$/kg': n.precoMedio ? Number(n.precoMedio).toFixed(2) : '', 'Rateio Frete': n.rateio, 'Data Fat.': n.dataFaturamento };
+  });
+  exportarCSV(dados, 'nfes_' + new Date().toISOString().split('T')[0]);
+};
+
+window.exportarTudo = async function() {
+  const [cSnap, mSnap, tSnap, nSnap, clSnap] = await Promise.all([
+    getDocs(collection(db,'cargas')),
+    getDocs(collection(db,'motoristas')),
+    getDocs(collection(db,'transportadoras')),
+    getDocs(collection(db,'nfes')),
+    getDocs(collection(db,'clientes_base'))
+  ]);
+  alert(`Exportando:\n- ${cSnap.size} cargas\n- ${mSnap.size} motoristas\n- ${tSnap.size} transportadoras\n- ${nSnap.size} NFes\n- ${clSnap.size} clientes\n\nSerão baixados 5 arquivos CSV.`);
+  setTimeout(()=>exportarCargas(), 100);
+  setTimeout(()=>exportarMotoristas(), 600);
+  setTimeout(()=>exportarTransportadoras(), 1100);
+  setTimeout(()=>exportarNFes(), 1600);
+  setTimeout(()=>exportarClientes(), 2100);
+};
+
+
+// ─── BASE DE CLIENTES ────────────────────────────────────────────────────
+async function loadClientes() {
+  $('clientesList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  const snap = await getDocs(collection(db,'clientes_base'));
+  const clientes = snap.docs.map(d=>({id:d.id,...d.data()}))
+    .sort((a,b) => (a.nome||'').localeCompare(b.nome||''));
+  if (clientes.length===0) {
+    $('clientesList').innerHTML='<div class="empty"><div class="empty-i">🏭</div><div class="empty-t">Nenhum cliente</div><div class="empty-s">Toque no + para cadastrar</div></div>';
+    return;
+  }
+  $('clientesList').innerHTML = clientes.map(c=>`
+    <div class="li">
+      <div class="av" style="background:rgba(59,130,246,.15);color:var(--p2);">🏭</div>
+      <div class="li-body">
+        <div class="li-title">${c.nome}</div>
+        <div class="li-sub">${c.cnpj||'—'} · ${c.cidade||'—'}/${c.uf||'—'}</div>
+      </div>
+      <div class="li-right">
+        <span class="pill pb">${c.regiao||'—'}</span>
+        <button class="btn-sm btn-blue" onclick="editarClienteBase('${c.id}')" style="font-size:10px;padding:3px 7px;">✏️</button>
+      </div>
+    </div>`).join('');
+}
+
+window.editarClienteBase = async function(id) {
+  const d = await getDoc(doc(db,'clientes_base',id));
+  const c = d.data();
+  $('cbId').value = id;
+  $('cbNome').value = c.nome||'';
+  $('cbCNPJ').value = c.cnpj||'';
+  $('cbCidade').value = c.cidade||'';
+  $('cbUF').value = c.uf||'';
+  $('cbRegiao').value = c.regiao||'';
+  $('cbTel').value = c.telefone||'';
+  openModal('modalClienteBase');
+};
+
+window.salvarClienteBase = async function() {
+  const nome = $('cbNome').value.trim();
+  if (!nome) { alert('Informe a Razão Social.'); return; }
+  const dados = {
+    nome,
+    cnpj: $('cbCNPJ').value.trim(),
+    cidade: $('cbCidade').value.trim(),
+    uf: $('cbUF').value,
+    regiao: $('cbRegiao').value,
+    telefone: $('cbTel').value.trim(),
+    atualizadoEm: serverTimestamp()
+  };
+  const editId = $('cbId').value;
+  if (editId) {
+    await updateDoc(doc(db,'clientes_base',editId), dados);
+  } else {
+    dados.criadoEm = serverTimestamp();
+    await addDoc(collection(db,'clientes_base'), dados);
+  }
+  closeModal('modalClienteBase');
+  $('cbId').value = '';
+  ['cbNome','cbCNPJ','cbCidade','cbTel'].forEach(id=>$(id).value='');
+  ['cbUF','cbRegiao'].forEach(id=>$(id).value='');
+  if (currentScreen==='clientes') loadClientes();
+};
+
+// ─── EDITAR NFe ──────────────────────────────────────────────────────────
+window.abrirEditarNFe = async function(nfeId, cargaId) {
+  if (!nfeId) { alert('ID da NFe não encontrado.'); return; }
+  try {
+    const d = await getDoc(doc(db,'nfes',nfeId));
+    if (!d.exists()) { alert('NFe não encontrada.'); return; }
+    const n = d.data();
+    $('enId').value = nfeId;
+    $('enCargaId').value = cargaId;
+    $('enNFe').value = n.nfe||'';
+    $('enDataFat').value = n.dataFaturamento ? n.dataFaturamento.toDate().toISOString().split('T')[0] : '';
+    $('enValorNFe').value = n.valorNFe||'';
+    $('enPesoLiq').value = n.pesoLiq||'';
+    $('enPesoBruto').value = n.pesoBruto||'';
+    $('enObs').value = n.obs||'';
+    openModal('modalEditarNFe');
+  } catch(e) {
+    alert('Erro ao abrir NFe: ' + e.message);
+  }
+};
+
+window.salvarEdicaoNFe = async function() {
+  const id = $('enId').value;
+  const cargaId = $('enCargaId').value;
+  if (!id) { alert('NFe não identificada.'); return; }
+  const dados = {
+    nfe: $('enNFe').value.trim(),
+    valorNFe: Number($('enValorNFe').value)||0,
+    pesoLiq: Number($('enPesoLiq').value)||0,
+    pesoBruto: Number($('enPesoBruto').value)||0,
+    obs: $('enObs').value.trim(),
+    dataFaturamento: $('enDataFat').value ? Timestamp.fromDate(new Date($('enDataFat').value+'T12:00:00')) : null,
+    atualizadoEm: serverTimestamp()
+  };
+  await updateDoc(doc(db,'nfes',id), dados);
+  closeModal('modalEditarNFe');
+  abrirCarga(cargaId);
 };
 
 
