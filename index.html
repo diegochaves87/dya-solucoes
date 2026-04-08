@@ -1031,7 +1031,7 @@ async function _rest(method, path, body) {
 }
 
 // ── Referências (simulam SDK) ─────────────────────────────────────
-function collection(_, colPath) { return { _type:'col', _path: colPath }; }
+function collection(_, ...args) { return { _type:'col', _path: args.join('/') }; }
 function doc(_, ...args) {
   const path = args.join('/');
   const parts = path.split('/');
@@ -1053,7 +1053,7 @@ async function getDocs(ref) {
   try {
     let url;
     if (ref._type === 'col') {
-      url = `/${ref._path}`;
+      url = '/' + ref._path;
     } else if (ref._type === 'query') {
       // Usar runQuery
       return await _runQuery(ref);
@@ -1073,7 +1073,12 @@ async function getDocs(ref) {
 }
 
 async function _runQuery(ref) {
-  const body = { structuredQuery: { from: [{ collectionId: ref._col }] } };
+  // Para subcoleções: _col tem path completo tipo 'cargas/ID/clientes'
+  // O collectionId deve ser só o último segmento, e o parent o restante
+  const colParts = ref._col.split('/');
+  const collectionId = colParts[colParts.length - 1];
+  const parentPath = colParts.length > 1 ? '/' + colParts.slice(0,-1).join('/') : '';
+  const body = { structuredQuery: { from: [{ collectionId }] } };
   if (ref._wheres && ref._wheres.length > 0) {
     const filters = ref._wheres.map(w => ({
       fieldFilter: {
@@ -1088,7 +1093,7 @@ async function _runQuery(ref) {
   if (ref._limit) body.structuredQuery.limit = ref._limit;
 
   try {
-    const results = await _rest('POST', ':runQuery', body);
+    const results = await _rest('POST', parentPath + ':runQuery', body);
     const docs = (results || []).filter(r => r && r.document).map(r => {
       const obj = _docToObj(r && r.document);
       return { id: obj.__id, data: () => obj, exists: () => true };
@@ -1661,6 +1666,7 @@ window.abrirNovoCliente = function(cargaId) {
   const today = new Date().toISOString().split('T')[0];
   $('clPrevisao').value = today;
   openModal('modalNovoCliente');
+  } catch(e) { alert('Erro ao abrir cliente: ' + e.message); console.error(e); }
 };
 
 window.salvarNovoCliente = async function() {
@@ -2185,9 +2191,11 @@ window.abrirCarga = async function(id) {
 
 window.editarCliente = async function(cargaId, clienteId) {
   currentCargaId = cargaId;
-  const d = await getDoc(doc(db,'cargas',cargaId,'clientes',clienteId));
-  const cl = d.data();
-  $('clEditId').value = clienteId;
+  try {
+    const d = await getDoc(doc(db,'cargas',cargaId,'clientes',clienteId));
+    const cl = d.data();
+    if (!cl) { alert('Cliente não encontrado: ' + clienteId); return; }
+    $('clEditId').value = clienteId;
   $('clNome').value = cl.nome||'';
   $('clCNPJ').value = cl.cnpj||'';
   $('clCidade').value = cl.cidade||'';
