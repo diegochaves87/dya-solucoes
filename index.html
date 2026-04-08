@@ -2210,6 +2210,7 @@ window.editarCliente = async function(cargaId, clienteId) {
   $('clBusca').value = '';
   $('clSearchResults').style.display='none';
   openModal('modalNovoCliente');
+  } catch(e) { alert('Erro ao editar cliente: ' + e.message); }
 };
 
 // ─── MOTORISTAS ──────────────────────────────────────────
