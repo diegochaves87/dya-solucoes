@@ -1666,7 +1666,6 @@ window.abrirNovoCliente = function(cargaId) {
   const today = new Date().toISOString().split('T')[0];
   $('clPrevisao').value = today;
   openModal('modalNovoCliente');
-  } catch(e) { alert('Erro ao abrir cliente: ' + e.message); console.error(e); }
 };
 
 window.salvarNovoCliente = async function() {
