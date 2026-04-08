@@ -1591,6 +1591,7 @@ window.abrirCarga = async function(id) {
       <div class="sec-t" style="display:flex;justify-content:space-between;align-items:center;">
         Clientes (${clientes.length})
         ${isOp ? `<button class="btn-sm btn-purple" onclick="abrirNovoCliente('${id}')">+ Cliente</button>` : ''}
+        ${isOp && clientes.length > 1 ? `<button class="btn-sm btn-amber" onclick="abrirUnificar('${id}')">🔗 Unificar</button>` : ''}
       </div>
       ${clientesHTML}
     </div>`;
@@ -1727,39 +1728,76 @@ window.salvarNovoCliente = async function() {
 window.gerarRomaneio = async function(cargaId) {
   const d = await getDoc(doc(db,'cargas',cargaId));
   const c = {id:d.id,...d.data()};
-  var _tdSnap = c.transportadoraId ? (await getDoc(doc(db,'transportadoras',c.transportadoraId))).data() : null; let transpNome = _tdSnap ? (_tdSnap.apelido || '—') : '—';
+  var _tdSnap = c.transportadoraId ? (await getDoc(doc(db,'transportadoras',c.transportadoraId))).data() : null;
+  let transpNome = (_tdSnap && _tdSnap.apelido) ? _tdSnap.apelido : '—';
   let motData = c.motoristaId ? (await getDoc(doc(db,'motoristas',c.motoristaId))).data() : null;
   const motNome = (motData && motData.nome) || '—';
   const motCPF = (motData && motData.cpf) || '—';
   const motPlacaC = (motData && motData.placacavalo) || '—';
   const motPlacaR = (motData && motData.placarreta) || '—';
   const motTel = (motData && motData.telefone) || '—';
+
+  // Carregar clientes ordenados por posição
   const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
   const clientes = clSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.posicao||99)-(b.posicao||99));
-  const totalKg = clientes.reduce((s,cl)=>s+Number(cl.pesoLiq||0),0);
-  const totalFrete = Number(c.valorFrete||0);
 
-  // Ordem de entrega
-  const rowsEntrega = clientes.map((cl,i)=>{
-    const rpkg = totalKg>0 ? (totalFrete/totalKg) : 0;
-    const sub = rpkg * Number(cl.pesoLiq||0);
+  // Carregar NFes lançadas
+  const nfesSnap = await getDocs(collection(db,'nfes'));
+  const nfesArr = nfesSnap.docs.map(d=>d.data()).filter(n=>n.cargaId===cargaId);
+
+  // Agrupar clientes — mesmo cliente (mesmo CNPJ ou nome) = uma linha de entrega
+  // Mas respeitar a lógica de LOCAL DE ENTREGA: se tiver localEntrega, agrupa por ele
+  const gruposMap = {};
+  clientes.forEach(cl => {
+    // Chave de agrupamento: localEntregaId se existir, senão CNPJ, senão nome
+    const chave = cl.localEntregaId || cl.cnpj || cl.nome || cl.id;
+    if (!gruposMap[chave]) {
+      gruposMap[chave] = {
+        nome: cl.localEntregaNome || cl.nome,
+        clientes: [],
+        cidade: cl.localEntregaCidade || cl.cidade || '—',
+        uf: cl.localEntregaUF || cl.uf || '—',
+        agendNum: cl.agendNum || '',
+        obs: cl.obs || '',
+        posicao: cl.posicao || 99
+      };
+    }
+    gruposMap[chave].clientes.push(cl);
+  });
+
+  // Para cada grupo, somar pesos e valores das NFes correspondentes
+  const grupos = Object.values(gruposMap).sort((a,b)=>a.posicao-b.posicao);
+  grupos.forEach(g => {
+    const clienteIds = g.clientes.map(cl=>cl.id);
+    const nfesGrupo = nfesArr.filter(n=>clienteIds.includes(n.clienteId));
+    g.pesoLiqTotal = nfesGrupo.length > 0
+      ? nfesGrupo.reduce((s,n)=>s+Number(n.pesoLiq||0),0)
+      : g.clientes.reduce((s,cl)=>s+Number(cl.pesoLiq||0),0);
+    g.valorTotal = nfesGrupo.length > 0
+      ? nfesGrupo.reduce((s,n)=>s+Number(n.valorNFe||0),0)
+      : g.clientes.reduce((s,cl)=>s+Number(cl.valorNF||cl.valorNFe||0),0);
+    g.nfes = nfesGrupo;
+    g.qtdNotas = nfesGrupo.length || g.clientes.length;
+  });
+
+  const totalKg = grupos.reduce((s,g)=>s+g.pesoLiqTotal,0);
+  const totalFrete = Number(c.valorFrete||0);
+  const rpkg = totalKg>0 ? totalFrete/totalKg : 0;
+
+  // Linhas da tabela de entrega (uma por grupo/destino)
+  const rowsEntrega = grupos.map((g,i) => {
+    const sub = rpkg * g.pesoLiqTotal;
+    const localInfo = g.agendNum ? `<br><small style="color:#6b7db3;">Agend: ${g.agendNum}</small>` : '';
     return `<tr>
       <td style="text-align:center;font-weight:700;">${i+1}</td>
-      <td>${cl.nome}</td>
-      <td>${cl.cidade||'—'}/${cl.uf||'—'}${cl.agendNum?'<br><small>Agend: '+cl.agendNum+'</small>':''}</td>
-      <td style="text-align:right;">${Number(cl.pesoLiq||0).toLocaleString('pt-BR')}</td>
+      <td>${g.nome}</td>
+      <td>${g.cidade}/${g.uf}${localInfo}</td>
+      <td style="text-align:center;">${g.qtdNotas}</td>
+      <td style="text-align:right;">${Number(g.pesoLiqTotal).toLocaleString('pt-BR')}</td>
       <td style="text-align:right;">R$ ${rpkg.toFixed(4)}</td>
       <td style="text-align:right;">R$ ${sub.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
     </tr>`;
   }).join('');
-
-  // Ordem de carregamento = inverso
-  const rowsCarreg = [...clientes].reverse().map((cl,i)=>`<tr>
-    <td style="text-align:center;font-weight:700;">${i+1}</td>
-    <td>${cl.nome}</td>
-    <td>${cl.cidade||'—'}/${cl.uf||'—'}</td>
-    <td style="text-align:right;">${Number(cl.pesoLiq||0).toLocaleString('pt-BR')}</td>
-  </tr>`).join('');
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
   <style>
@@ -1781,7 +1819,7 @@ window.gerarRomaneio = async function(cargaId) {
     tr:nth-child(even) td{background:#f8f9ff;}
     .total-row td{background:#0f3460!important;color:white;font-weight:700;}
     .section-title{font-size:14px;font-weight:700;color:#0f3460;margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid #e8eaf6;}
-    .footer{display:flex;justify-content:space-between;margin-top:32px;}
+    .footer{display:flex;justify-content:space-between;margin-top:32px;padding-top:16px;border-top:1px solid #e8eaf6;}
     .sign{text-align:center;}
     .sign-line{width:180px;border-top:1px solid #1a1a2e;margin:0 auto 6px;}
     .sign-name{font-size:12px;font-weight:700;}
@@ -1807,6 +1845,8 @@ window.gerarRomaneio = async function(cargaId) {
       <div class="row"><span class="rk">Data saída</span><span class="rv">${fmtData(c.dataSaida)}</span></div>
       <div class="row"><span class="rk">Valor global frete</span><span class="rv">${fmtMoeda(c.valorFrete)}</span></div>
       <div class="row"><span class="rk">Contratante</span><span class="rv">${c.contratante||'—'}</span></div>
+      <div class="row"><span class="rk">Total kg</span><span class="rv">${totalKg.toLocaleString('pt-BR')} kg</span></div>
+      <div class="row"><span class="rk">R$/kg médio</span><span class="rv">R$ ${rpkg.toFixed(4)}</span></div>
     </div>
     <div class="block">
       <div class="block-title">Motorista</div>
@@ -1819,31 +1859,34 @@ window.gerarRomaneio = async function(cargaId) {
   </div>
   <div class="section-title">Ordem de Entrega</div>
   <table>
-    <thead><tr><th>Pos.</th><th>Cliente</th><th>Local de Entrega</th><th>Peso Liq. (kg)</th><th>R$/kg</th><th>Sub-total</th></tr></thead>
+    <thead><tr><th>Pos.</th><th>Cliente</th><th>Local de Entrega</th><th>Notas</th><th>Peso Liq. (kg)</th><th>R$/kg</th><th>Sub-total frete</th></tr></thead>
     <tbody>${rowsEntrega}</tbody>
-    <tr class="total-row"><td colspan="3">TOTAL</td><td>${totalKg.toLocaleString('pt-BR')} kg</td><td>—</td><td>${fmtMoeda(totalFrete)}</td></tr>
-  </table>
-  <div class="section-title">Ordem de Carregamento (inverso da entrega)</div>
-  <table>
-    <thead><tr><th>Pos.</th><th>Cliente</th><th>Local</th><th>Peso Liq. (kg)</th></tr></thead>
-    <tbody>${rowsCarreg}</tbody>
+    <tr class="total-row"><td colspan="4">TOTAL</td><td>${totalKg.toLocaleString('pt-BR')} kg</td><td>—</td><td>${fmtMoeda(totalFrete)}</td></tr>
   </table>
   <div class="footer">
-    <div class="sign"><div class="sign-line"></div><div class="sign-name">${c.contratante||'Diego Chaves'}</div><div class="sign-role">Gerente de Logística</div></div>
+    <div class="sign">
+      <div class="sign-line"></div>
+      <div class="sign-name">${c.contratante||'Diego Chaves'}</div>
+      <div class="sign-role">Gerente de Logística</div>
+    </div>
     <div style="font-size:11px;color:#9ca3af;text-align:right;">DYA Soluções · Maris Pescados<br>${new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})}</div>
   </div>
   
-  
-<!-- Modal: Cadastrar Cliente Base -->
-<div class="modal-bg" id="modalClienteBase">
+<!-- Modal: Local de Entrega -->
+<div class="modal-bg" id="modalLocalEntrega">
   <div class="modal">
-    <div class="modal-title">Cadastrar Cliente <button class="modal-close" onclick="closeModal('modalClienteBase')">×</button></div>
-    <div class="alert alert-b" style="margin:0 0 12px;font-size:12px;">A base de clientes é usada para busca automática ao lançar cargas.</div>
-    <div class="fld"><label>Razão Social *</label><input type="text" id="cbNome" placeholder="Nome completo da empresa"></div>
-    <div class="fld"><label>CNPJ</label><input type="text" id="cbCNPJ" placeholder="00.000.000/0001-00"></div>
-    <div class="fld"><label>Cidade</label><input type="text" id="cbCidade" placeholder="Ex: São Paulo"></div>
+    <div class="modal-title" id="modalLocalTitle">Local de Entrega <button class="modal-close" onclick="closeModal('modalLocalEntrega')">×</button></div>
+
+    <!-- Lista de locais cadastrados -->
+    <div id="localEntregaLista" style="max-height:220px;overflow-y:auto;margin-bottom:14px;border:1px solid var(--border);border-radius:10px;"></div>
+
+    <!-- Cadastro de novo local -->
+    <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Cadastrar novo local</div>
+    <div class="fld"><label>Nome do local *</label><input type="text" id="leNome" placeholder="Ex: Filial SP, CD Carrefour Itapevi"></div>
+    <div class="fld"><label>Endereço / Observação</label><input type="text" id="leEndereco" placeholder="Rua, número, bairro"></div>
+    <div class="fld"><label>Cidade</label><input type="text" id="leCidade" placeholder="Ex: Itapevi"></div>
     <div class="fld"><label>UF</label>
-      <select id="cbUF">
+      <select id="leUF">
         <option value="">Selecione...</option>
         <option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option>
         <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
@@ -1853,35 +1896,25 @@ window.gerarRomaneio = async function(cargaId) {
         <option>SP</option><option>TO</option>
       </select>
     </div>
-    <div class="fld"><label>Região</label>
-      <select id="cbRegiao">
-        <option value="">Selecione...</option>
-        <option value="NORDESTE">Nordeste</option>
-        <option value="SUDESTE">Sudeste</option>
-        <option value="SUL">Sul</option>
-        <option value="CENTRO-OESTE">Centro-Oeste</option>
-        <option value="NORTE">Norte</option>
-      </select>
-    </div>
-    <div class="fld"><label>Telefone / Contato</label><input type="tel" id="cbTel" placeholder="(00) 99999-9999"></div>
-    <input type="hidden" id="cbId">
-    <button class="btn btn-grad" onclick="salvarClienteBase()">Salvar cliente</button>
+    <div class="fld"><label>Contato / Responsável</label><input type="text" id="leContato" placeholder="Nome e telefone do responsável"></div>
+    <input type="hidden" id="leClienteId">
+    <input type="hidden" id="leCargaId">
+    <button class="btn btn-grad" onclick="salvarLocalEntrega()" style="margin-bottom:8px;">Salvar e selecionar este local</button>
   </div>
 </div>
 
-<!-- Modal: Editar NFe -->
-<div class="modal-bg" id="modalEditarNFe">
+
+<!-- Modal: Unificar Clientes -->
+<div class="modal-bg" id="modalUnificar">
   <div class="modal">
-    <div class="modal-title">Editar NFe <button class="modal-close" onclick="closeModal('modalEditarNFe')">×</button></div>
-    <div class="fld"><label>Número da NFe</label><input type="text" id="enNFe"></div>
-    <div class="fld"><label>Data de faturamento</label><input type="date" id="enDataFat"></div>
-    <div class="fld"><label>Valor da NFe (R$)</label><input type="number" id="enValorNFe"></div>
-    <div class="fld"><label>Peso Líquido (kg)</label><input type="number" id="enPesoLiq"></div>
-    <div class="fld"><label>Peso Bruto (kg)</label><input type="number" id="enPesoBruto"></div>
-    <div class="fld"><label>Observações</label><textarea id="enObs"></textarea></div>
-    <input type="hidden" id="enId">
-    <input type="hidden" id="enCargaId">
-    <button class="btn btn-grad" onclick="salvarEdicaoNFe()">Salvar alterações</button>
+    <div class="modal-title">Unificar Entregas <button class="modal-close" onclick="closeModal('modalUnificar')">×</button></div>
+    <div class="alert alert-b" style="margin:0 0 12px;font-size:12px;">Selecione os clientes/notas que serão entregues no <strong>mesmo local</strong>. Eles aparecerão como uma única linha no romaneio, mas continuarão individualmente no sistema.</div>
+    <div id="unificarLista" style="max-height:300px;overflow-y:auto;margin-bottom:14px;"></div>
+    <div class="fld"><label>Nome do grupo / destino *</label><input type="text" id="unificarNome" placeholder="Ex: CD Carrefour Itapevi, Filial SP"></div>
+    <div class="fld"><label>Local de entrega (opcional)</label>
+      <select id="unificarLocal"><option value="">Sem local definido</option></select>
+    </div>
+    <button class="btn btn-grad" onclick="confirmarUnificacao()">Unificar selecionados</button>
   </div>
 </div>
 
@@ -1892,7 +1925,6 @@ window.gerarRomaneio = async function(cargaId) {
   w.document.close();
   setTimeout(()=>w.print(),600);
 };
-
 
 // ─── LANÇAMENTO DE NFe (CONVERTER PARA ATIVA) ──────────────────────────
 let nfesTemp = [];
@@ -2133,6 +2165,7 @@ window.abrirCarga = async function(id) {
         ${cl.status==='entregue' ? `<button class="btn-sm btn-amber" onclick="abrirRecibo('${id}','${cl.id}','${cl.nome}')">🧾 Recibo</button>` : ''}
         ${cl.status==='entregue' ? `<button class="btn-sm btn-purple" onclick="abrirPesquisa('${id}','${cl.id}','${cl.nome}')">⭐ Pesquisa</button>` : ''}
         <button class="btn-sm btn-blue" onclick="editarCliente('${id}','${cl.id}')">✏️ Editar</button>
+        <button class="btn-sm btn-amber" onclick="abrirLocalEntrega('${cl.id}','${id}')" title="Definir local de entrega">📍 Local</button>
         <button class="btn-sm btn-wa" onclick="waCliente('${id}','${cl.id}')">📱 WA</button>
       ` : '';
 
@@ -2164,8 +2197,16 @@ window.abrirCarga = async function(id) {
   }
 
   // Total resumo
-  const totalValorClientes = clientes.reduce((s,cl)=>s+Number(cl.valorNF||cl.valorNFe||0),0);
-  const precoMedioGeral = totalKgClientes>0 ? (totalValorClientes/totalKgClientes).toFixed(2) : '—';
+  // Preço médio correto: usar NFes lançadas (dados reais)
+  const nfesArr = nfesSnap.docs.map(d=>d.data());
+  const totalKgNFes = nfesArr.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
+  const totalValorNFes = nfesArr.reduce((s,n)=>s+Number(n.valorNFe||0),0);
+  // Se há NFes lançadas, usar elas; senão usar estimativas dos clientes
+  const totalKgBase = totalKgNFes>0 ? totalKgNFes : totalKgClientes;
+  const totalValorBase = totalValorNFes>0 ? totalValorNFes : clientes.reduce((s,cl)=>s+Number(cl.valorNF||cl.valorNFe||0),0);
+  const precoMedioGeral = totalKgBase>0 ? (totalValorBase/totalKgBase).toFixed(2) : '—';
+  // Atualizar peso líquido exibido com dados das NFes se disponível
+  const pesoExibir = totalKgNFes>0 ? totalKgNFes : totalKgClientes;
 
   $('cargaDetContent').innerHTML = `
     ${provBanner}
@@ -2181,7 +2222,7 @@ window.abrirCarga = async function(id) {
       <div class="row"><span class="row-k">Contratante</span><span class="row-v">${c.contratante||'—'}</span></div>
       <div class="row"><span class="row-k">Tipo · Frete</span><span class="row-v">${c.tipoCarga||'—'} · ${c.frete||'—'}</span></div>
       <div class="row"><span class="row-k">Valor frete global</span><span class="row-v">${fmtMoeda(c.valorFrete)}</span></div>
-      <div class="row"><span class="row-k">Peso líq. total</span><span class="row-v">${fmtKg(totalKgClientes)}</span></div>
+      <div class="row"><span class="row-k">Peso líq. total</span><span class="row-v">${fmtKg(pesoExibir)}</span></div>
       <div class="row"><span class="row-k">R$/kg médio</span><span class="row-v">${precoMedioGeral==='—'?'—':'R$ '+precoMedioGeral+'/kg'}</span></div>
       <div class="row"><span class="row-k">Data saída</span><span class="row-v">${fmtData(c.dataSaida)}</span></div>
     </div>
@@ -3173,6 +3214,120 @@ window.exportarTudo = async function() {
   setTimeout(()=>exportarTransportadoras(), 1100);
   setTimeout(()=>exportarNFes(), 1600);
   setTimeout(()=>exportarClientes(), 2100);
+};
+
+
+
+
+// ─── UNIFICAR CLIENTES ────────────────────────────────────────────────────
+window.abrirUnificar = async function(cargaId) {
+  const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
+  const clientes = clSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.posicao||99)-(b.posicao||99));
+
+  $('unificarLista').innerHTML = clientes.map(cl=>`
+    <div class="li" style="padding:10px 14px;">
+      <input type="checkbox" id="uchk_${cl.id}" value="${cl.id}" style="width:18px;height:18px;margin-right:8px;flex-shrink:0;">
+      <div class="li-body">
+        <div class="li-title" style="font-size:13px;">${cl.nome}</div>
+        <div class="li-sub">${cl.cidade||'—'}/${cl.uf||'—'} · ${fmtKg(cl.pesoLiq)}</div>
+        ${cl.localEntregaNome?`<div style="font-size:11px;color:var(--p2);">📍 ${cl.localEntregaNome}</div>`:''}
+      </div>
+    </div>`).join('');
+
+  // Carregar locais no select
+  const locSnap = await getDocs(collection(db,'locais_entrega'));
+  const locais = locSnap.docs.map(d=>({id:d.id,...d.data()}));
+  $('unificarLocal').innerHTML = '<option value="">Sem local definido</option>' +
+    locais.map(l=>`<option value="${l.id}" data-nome="${l.nome}" data-cidade="${l.cidade||''}" data-uf="${l.uf||''}">${l.nome} · ${l.cidade||''}/${l.uf||''}</option>`).join('');
+
+  $('unificarNome').value = '';
+  window._unificarCargaId = cargaId;
+  openModal('modalUnificar');
+};
+
+window.confirmarUnificacao = async function() {
+  const nome = $('unificarNome').value.trim();
+  if (!nome) { alert('Informe o nome do grupo/destino.'); return; }
+  const cargaId = window._unificarCargaId;
+  const checkboxes = document.querySelectorAll('#unificarLista input[type=checkbox]:checked');
+  if (checkboxes.length < 2) { alert('Selecione pelo menos 2 clientes para unificar.'); return; }
+
+  const localSel = $('unificarLocal');
+  const localId = localSel.value;
+  const localOpt = localSel.options[localSel.selectedIndex];
+  const localNome = localId ? localOpt.dataset.nome : '';
+  const localCidade = localId ? localOpt.dataset.cidade : '';
+  const localUF = localId ? localOpt.dataset.uf : '';
+
+  // Atualizar cada cliente selecionado com o grupo
+  for (const chk of checkboxes) {
+    await updateDoc(doc(db,'cargas',cargaId,'clientes',chk.value), {
+      grupoEntregaId: nome,
+      grupoEntregaNome: nome,
+      localEntregaId: localId||null,
+      localEntregaNome: localNome||nome,
+      localEntregaCidade: localCidade,
+      localEntregaUF: localUF
+    });
+  }
+  closeModal('modalUnificar');
+  abrirCarga(cargaId);
+};
+
+
+// ─── BASE DE LOCAIS DE ENTREGA ────────────────────────────────────────────
+window.abrirLocalEntrega = async function(clienteId, cargaId) {
+  $('leClienteId').value = clienteId;
+  $('leCargaId').value = cargaId;
+  ['leNome','leEndereco','leCidade','leContato'].forEach(id=>$(id).value='');
+  $('leUF').value = '';
+
+  // Carregar locais cadastrados
+  const snap = await getDocs(collection(db,'locais_entrega'));
+  const locais = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+  const lista = $('localEntregaLista');
+  if (locais.length === 0) {
+    lista.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:12px;">Nenhum local cadastrado. Cadastre abaixo.</div>';
+  } else {
+    lista.innerHTML = locais.map(l=>`
+      <div class="li" style="padding:10px 14px;" onclick="selecionarLocalEntrega('${l.id}','${(l.nome||'').replace(/'/g,"\'")}','${l.cidade||''}','${l.uf||''}')">
+        <div class="li-body">
+          <div class="li-title" style="font-size:13px;">${l.nome}</div>
+          <div class="li-sub">${l.cidade||'—'}/${l.uf||'—'} · ${l.endereco||''}</div>
+        </div>
+        <div class="li-right"><span style="font-size:11px;color:var(--p2);">Selecionar →</span></div>
+      </div>`).join('');
+  }
+  openModal('modalLocalEntrega');
+};
+
+window.selecionarLocalEntrega = async function(localId, nome, cidade, uf) {
+  const clienteId = $('leClienteId').value;
+  const cargaId = $('leCargaId').value;
+  await updateDoc(doc(db,'cargas',cargaId,'clientes',clienteId), {
+    localEntregaId: localId,
+    localEntregaNome: nome,
+    localEntregaCidade: cidade,
+    localEntregaUF: uf
+  });
+  closeModal('modalLocalEntrega');
+  abrirCarga(cargaId);
+};
+
+window.salvarLocalEntrega = async function() {
+  const nome = $('leNome').value.trim();
+  if (!nome) { alert('Informe o nome do local.'); return; }
+  const dados = {
+    nome,
+    endereco: $('leEndereco').value.trim(),
+    cidade: $('leCidade').value.trim(),
+    uf: $('leUF').value,
+    contato: $('leContato').value.trim(),
+    criadoEm: serverTimestamp()
+  };
+  const ref = await addDoc(collection(db,'locais_entrega'), dados);
+  // Selecionar automaticamente
+  await selecionarLocalEntrega(ref.id, nome, dados.cidade, dados.uf);
 };
 
 
