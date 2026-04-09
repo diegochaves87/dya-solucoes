@@ -1637,8 +1637,14 @@ window.filtrarCargas = function(f) {
 
 async function loadCargas() {
   $('cargasList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
-  const snap = await getDocs(query(collection(db,'cargas'), orderBy('criadoEm','desc')));
-  let cargas = snap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>!c.arquivado);
+  const snap = await getDocs(collection(db,'cargas'));
+  let cargas = snap.docs.map(d=>({id:d.id,...d.data()}))
+    .filter(c=>!c.arquivado)
+    .sort((a,b)=>{
+      const ta = a.criadoEm?.()?a.criadoEm.toDate().getTime():(a.criadoEm?._ts||0);
+      const tb = b.criadoEm?.()?b.criadoEm.toDate().getTime():(b.criadoEm?._ts||0);
+      return tb - ta;
+    });
   if (cargaFiltro==='ativas') cargas = cargas.filter(c=>['planejada','em_transito'].includes(c.status));
   if (cargaFiltro==='provisorias') cargas = cargas.filter(c=>c.status==='provisoria');
   if (cargaFiltro==='concluidas') cargas = cargas.filter(c=>c.status==='concluida');
@@ -2583,8 +2589,8 @@ window.filtrarCtes = function(f) {
 
 async function loadCtes() {
   $('ctesList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
-  const snap = await getDocs(query(collection(db,'ctes'), where('status','==',cteFiltro), orderBy('criadoEm','desc')));
-  const ctes = snap.docs.map(d=>({id:d.id,...d.data()}));
+  const snap = await getDocs(collection(db,'ctes'));
+  const ctes = snap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>!cteFiltro||c.status===cteFiltro).sort((a,b)=>(b.criadoEm?._ts||0)-(a.criadoEm?._ts||0));
   if (ctes.length===0) { $('ctesList').innerHTML='<div class="empty"><div class="empty-i">📄</div><div class="empty-t">Nenhum CTE</div></div>'; return; }
   const isOp = ['gestor','operacional'].includes(currentUser.perfil);
   $('ctesList').innerHTML = ctes.map(cte=>`
@@ -2640,7 +2646,7 @@ async function loadRecibos() {
     }
   }
   // Recibos lançados
-  const recSnap = await getDocs(query(collection(db,'recibos'), orderBy('criadoEm','desc')));
+  const recSnap = await getDocs(collection(db,'recibos'));
   const recibos = recSnap.docs.map(d=>({id:d.id,...d.data()}));
   let html = '';
   if (semRecibo.length>0) {
@@ -2710,7 +2716,7 @@ window.confirmarRecibo = async function() {
 // ─── PESQUISAS ───────────────────────────────────────────
 async function loadPesquisas() {
   $('pesquisasList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
-  const snap = await getDocs(query(collection(db,'pesquisas'), orderBy('criadoEm','desc')));
+  const snap = await getDocs(collection(db,'pesquisas'));
   const ps = snap.docs.map(d=>({id:d.id,...d.data()}));
   if (ps.length===0) { $('pesquisasList').innerHTML='<div class="empty"><div class="empty-i">⭐</div><div class="empty-t">Nenhuma pesquisa</div></div>'; return; }
   $('pesquisasList').innerHTML = ps.map(p=>`
@@ -3123,7 +3129,7 @@ window.submeterArquivamento = async function(tipo, id, nome) {
 // ── CARREGAR TELA DE APROVAÇÕES ───────────────────────────────────────
 async function loadAprovacoes() {
   $('aprovacoesList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
-  const snap = await getDocs(query(collection(db,'aprovacoes'), orderBy('criadoEm','desc')));
+  const snap = await getDocs(collection(db,'aprovacoes'));
   const aprovs = snap.docs.map(d=>({id:d.id,...d.data()}));
   const pendentes = aprovs.filter(a=>a.status==='pendente');
   const historico = aprovs.filter(a=>a.status!=='pendente');
