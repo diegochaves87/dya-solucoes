@@ -1836,7 +1836,6 @@ window.gerarRomaneio = async function(cargaId) {
     const endCompleto = g.localEndereco
       ? (g.localEndereco + (g.localCidade ? ', ' + g.localCidade + '/' + g.localUF : ''))
       : (g.localCidade ? g.localCidade + '/' + g.localUF : 'O MESMO ENDEREÇO DA NFe');
-    color:#3b82f6;">📍 Ver no Google Maps</a>' : '';
     return '<tr><td style="text-align:center;font-weight:700;">ENTREGA ' + g.posNum + '</td><td style="font-weight:600;">' + g.localNome + '</td><td>' + endCompleto + '</td></tr>';
   }).join('');
 
