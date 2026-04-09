@@ -2663,10 +2663,9 @@ window.salvarPesquisa = async function(cargaId, clienteId, nome) {
 };
 
 // ─── DASHBOARD ───────────────────────────────────────────
-async function loadDashboard() {
+async function loadDashboard(filtroStatus=null, periodoMes=null, periodoAno=null) {
   $('dashContent').innerHTML = '<div class="loading"><div class="spin"></div></div>';
   try {
-    // Buscar tudo sem where() — filtrar localmente
     const [cargasSnap, motSnap, transpSnap, nfesSnap, pesqSnap] = await Promise.all([
       getDocs(collection(db,'cargas')),
       getDocs(collection(db,'motoristas')),
@@ -2675,126 +2674,184 @@ async function loadDashboard() {
       getDocs(collection(db,'pesquisas'))
     ]);
 
-    const cargas = cargasSnap.docs.map(d=>({id:d.id,...d.data()}));
-    const nfes   = nfesSnap.docs.map(d=>({id:d.id,...d.data()}));
-    const transp = transpSnap.docs.map(d=>({id:d.id,...d.data()}));
-    const mots   = motSnap.docs.map(d=>({id:d.id,...d.data()}));
-    const pesqs  = pesqSnap.docs.map(d=>d.data());
-
-    // ── KPIs de cargas
-    const cAtivas     = cargas.filter(c=>['planejada','em_transito'].includes(c.status));
-    const cProvs      = cargas.filter(c=>c.status==='provisoria');
-    const cConcluidas = cargas.filter(c=>c.status==='concluida');
-    const cComFrete   = cargas.filter(c=>c.status!=='provisoria');
+    const todasCargas = cargasSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const todasNfes   = nfesSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const transp      = transpSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const mots        = motSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const pesqs       = pesqSnap.docs.map(d=>d.data());
     const motAtivos   = mots.filter(m=>!m.status||m.status==='ativo');
 
-    // ── Totais financeiros — usar dados das NFes
+    const hoje = new Date();
+    const mesSel  = periodoMes  !== null ? Number(periodoMes)  : hoje.getMonth();
+    const anoSel  = periodoAno  !== null ? Number(periodoAno)  : hoje.getFullYear();
+
+    // Filtro de período aplicado nas cargas (exceto provisórias para os totais)
+    const cargasComFrete = todasCargas.filter(c=>c.status!=='provisoria');
+
+    // Helper: checar se uma carga está no período selecionado
+    const noPeriodo = (c) => {
+      const ref = c.dataSaida || c.criadoEm || c.ativadoEm;
+      if (!ref) return false;
+      const d = ref.toDate ? ref.toDate() : new Date(ref._ts||ref*1000||0);
+      return d.getMonth()===mesSel && d.getFullYear()===anoSel;
+    };
+
+    const cargasPeriodo = cargasComFrete.filter(noPeriodo);
+    const nfesPeriodo   = todasNfes.filter(n=>{
+      const c = todasCargas.find(c=>c.id===n.cargaId);
+      return c && noPeriodo(c);
+    });
+
+    // KPIs GERAIS (sem filtro de período)
+    const cAtivas     = todasCargas.filter(c=>['planejada','em_transito'].includes(c.status));
+    const cProvs      = todasCargas.filter(c=>c.status==='provisoria');
+    const cConcluidas = todasCargas.filter(c=>c.status==='concluida');
+
+    // Totais financeiros GERAIS
     let totalKg=0, totalFrete=0, totalFaturamento=0;
-    nfes.forEach(n=>{ totalKg+=Number(n.pesoLiq||0); totalFaturamento+=Number(n.valorNFe||0); });
-    cComFrete.forEach(c=>{ totalFrete+=Number(c.valorFrete||0); });
-    const custoKg = totalKg>0 ? (totalFrete/totalKg).toFixed(4) : '0.00';
+    todasNfes.forEach(n=>{ totalKg+=Number(n.pesoLiq||0); totalFaturamento+=Number(n.valorNFe||0); });
+    cargasComFrete.forEach(c=>{ totalFrete+=Number(c.valorFrete||0); });
+    // Kg corrigido: usar pesoLiq da carga (mais completo)
+    const totalKgCargas = cargasComFrete.reduce((s,c)=>s+Number(c.pesoLiq||0),0);
+    const kgExibir = totalKgCargas > 0 ? totalKgCargas : totalKg;
+    const custoKg = kgExibir>0 ? (totalFrete/kgExibir).toFixed(4) : '0.00';
     const impacto = totalFaturamento>0 ? (totalFrete/totalFaturamento*100).toFixed(1) : '0.0';
     const mediaScore = pesqs.length>0 ? (pesqs.reduce((a,b)=>a+(Number(b.notaGeral)||0),0)/pesqs.length).toFixed(1) : '—';
 
-    // ── Por Transportadora
-    const byTransp = {};
+    // Totais do PERÍODO selecionado
+    const kgMes    = cargasPeriodo.reduce((s,c)=>s+Number(c.pesoLiq||0),0);
+    const freteMes = cargasPeriodo.reduce((s,c)=>s+Number(c.valorFrete||0),0);
+    const kgMesNFes = nfesPeriodo.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
+    const kgMesExibir = kgMes > 0 ? kgMes : kgMesNFes;
+
+    // ── Por Transportadora (período)
     const transpMap = {};
     transp.forEach(t=>{ transpMap[t.id] = t.apelido||t.nome||'—'; });
-    cComFrete.forEach(c=>{
+    const byTransp = {};
+    (filtroStatus ? todasCargas.filter(c=>c.status===filtroStatus) : cargasPeriodo).forEach(c=>{
       const tid = c.transportadoraId||'__sem';
       if (!byTransp[tid]) byTransp[tid] = { nome: transpMap[tid]||'Sem transportadora', cargas:0, kg:0, frete:0 };
       byTransp[tid].cargas++;
       byTransp[tid].frete += Number(c.valorFrete||0);
-      byTransp[tid].kg   += Number(c.pesoLiq||0);
+      byTransp[tid].kg    += Number(c.pesoLiq||0);
     });
-    const transpRows = Object.entries(byTransp)
-      .sort((a,b)=>b[1].cargas-a[1].cargas)
-      .map(([,t])=>{
-        const rpkg = t.kg>0 ? 'R$ '+(t.frete/t.kg).toFixed(4)+'/kg' : '—';
-        const pct  = cComFrete.length>0 ? (t.cargas/cComFrete.length*100).toFixed(0)+'%' : '—';
-        return `<div class="row"><span class="row-k">${t.nome}</span><span class="row-v" style="font-size:12px;">${t.cargas} embarques · ${fmtKg(t.kg)} · ${fmtMoeda(t.frete)} · ${rpkg} · ${pct}</span></div>`;
-      }).join('');
 
-    // ── Por UF
+    // ── Por UF (período)
     const byUF = {};
-    nfes.forEach(n=>{ const uf=n.uf||'—'; if(!byUF[uf]) byUF[uf]={kg:0,fat:0,count:0}; byUF[uf].kg+=Number(n.pesoLiq||0); byUF[uf].fat+=Number(n.valorNFe||0); byUF[uf].count++; });
-    const ufRows = Object.entries(byUF)
-      .sort((a,b)=>b[1].kg-a[1].kg).slice(0,10)
-      .map(([uf,u])=>{
-        const pct  = totalKg>0 ? (u.kg/totalKg*100).toFixed(1)+'%' : '—';
-        const rpkg = u.kg>0 && totalFrete>0 ? 'R$ '+(totalFrete*(u.kg/totalKg)/u.kg).toFixed(4)+'/kg' : '—';
-        return `<div class="row"><span class="row-k">${uf}</span><span class="row-v" style="font-size:12px;">${fmtKg(u.kg)} · ${pct} · ${rpkg} · ${u.count} notas</span></div>`;
-      }).join('');
+    nfesPeriodo.forEach(n=>{ const uf=n.uf||'—'; if(!byUF[uf]) byUF[uf]={kg:0,fat:0,count:0}; byUF[uf].kg+=Number(n.pesoLiq||0); byUF[uf].fat+=Number(n.valorNFe||0); byUF[uf].count++; });
 
-    // ── Por Região
+    // ── Por Região (período)
     const byReg = {};
-    nfes.forEach(n=>{ const r=n.regiao||'—'; if(!byReg[r]) byReg[r]={kg:0,count:0}; byReg[r].kg+=Number(n.pesoLiq||0); byReg[r].count++; });
-    const regRows = Object.entries(byReg)
-      .sort((a,b)=>b[1].kg-a[1].kg)
-      .map(([reg,r])=>{
-        const pct = totalKg>0 ? (r.kg/totalKg*100).toFixed(1)+'%' : '—';
-        return `<div class="row"><span class="row-k">${reg}</span><span class="row-v" style="font-size:12px;">${fmtKg(r.kg)} · ${pct} · ${r.count} notas</span></div>`;
-      }).join('');
+    nfesPeriodo.forEach(n=>{ const r=n.regiao||'—'; if(!byReg[r]) byReg[r]={kg:0,count:0}; byReg[r].kg+=Number(n.pesoLiq||0); byReg[r].count++; });
 
-    // ── Por Motorista (top 5)
-    const byMot = {};
+    // ── Por Motorista (período)
     const motMap = {};
     mots.forEach(m=>{ motMap[m.id] = m.nome||'—'; });
-    cComFrete.forEach(c=>{
+    const byMot = {};
+    cargasPeriodo.forEach(c=>{
       const mid = c.motoristaId||'__sem';
       if (!byMot[mid]) byMot[mid] = { nome: motMap[mid]||'Não informado', cargas:0, kg:0 };
       byMot[mid].cargas++;
       byMot[mid].kg += Number(c.pesoLiq||0);
     });
-    const motRows = Object.entries(byMot)
-      .sort((a,b)=>b[1].cargas-a[1].cargas).slice(0,5)
-      .map(([,m])=>`<div class="row"><span class="row-k">${m.nome}</span><span class="row-v" style="font-size:12px;">${m.cargas} embarques · ${fmtKg(m.kg)}</span></div>`)
-      .join('');
 
-    const hoje = new Date();
-    const mesAtual = hoje.getMonth();
-    const anoAtual = hoje.getFullYear();
-    const cMes = cComFrete.filter(c=>{ if(!c.criadoEm) return false; const d = c.criadoEm.toDate ? c.criadoEm.toDate() : new Date(c.criadoEm._ts||0); return d.getMonth()===mesAtual && d.getFullYear()===anoAtual; });
-    const kgMes = cMes.reduce((s,c)=>s+Number(c.pesoLiq||0),0);
-    const freteMes = cMes.reduce((s,c)=>s+Number(c.valorFrete||0),0);
+    // ── Gerar linhas das tabelas
+    const transpRows = Object.entries(byTransp).sort((a,b)=>b[1].cargas-a[1].cargas).map(([,t])=>{
+      const rpkg = t.kg>0 ? 'R$ '+(t.frete/t.kg).toFixed(4)+'/kg' : '—';
+      const base = filtroStatus ? todasCargas.filter(c=>c.status===filtroStatus).length : cargasPeriodo.length;
+      const pct  = base>0 ? (t.cargas/base*100).toFixed(0)+'%' : '—';
+      return `<div class="row"><span class="row-k">${t.nome}</span><span class="row-v" style="font-size:12px;">${t.cargas} embarques · ${fmtKg(t.kg)} · ${fmtMoeda(t.frete)} · ${rpkg} · ${pct}</span></div>`;
+    }).join('');
+
+    const kgPeriodTotal = kgMesExibir || 1;
+    const fretePeriodTotal = freteMes || 1;
+    const ufRows = Object.entries(byUF).sort((a,b)=>b[1].kg-a[1].kg).slice(0,10).map(([uf,u])=>{
+      const pct  = kgMesExibir>0 ? (u.kg/kgMesExibir*100).toFixed(1)+'%' : '—';
+      const rpkg = u.kg>0 && freteMes>0 ? 'R$ '+(freteMes*(u.kg/kgMesExibir)/u.kg).toFixed(4)+'/kg' : '—';
+      return `<div class="row"><span class="row-k">${uf}</span><span class="row-v" style="font-size:12px;">${fmtKg(u.kg)} · ${pct} · ${rpkg} · ${u.count} notas</span></div>`;
+    }).join('');
+
+    const regRows = Object.entries(byReg).sort((a,b)=>b[1].kg-a[1].kg).map(([reg,r])=>{
+      const pct = kgMesExibir>0 ? (r.kg/kgMesExibir*100).toFixed(1)+'%' : '—';
+      return `<div class="row"><span class="row-k">${reg}</span><span class="row-v" style="font-size:12px;">${fmtKg(r.kg)} · ${pct} · ${r.count} notas</span></div>`;
+    }).join('');
+
+    const motRows = Object.entries(byMot).sort((a,b)=>b[1].cargas-a[1].cargas).slice(0,5).map(([,m])=>
+      `<div class="row"><span class="row-k">${m.nome}</span><span class="row-v" style="font-size:12px;">${m.cargas} embarques · ${fmtKg(m.kg)}</span></div>`
+    ).join('');
+
+    // ── Lista de cargas para o KPI selecionado
+    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const nomeMes = meses[mesSel] + '/' + anoSel;
+
+    let filtroDetalhe = '';
+    if (filtroStatus) {
+      const statusLabel = {provisoria:'Provisórias',planejada:'Planejadas',em_transito:'Em Trânsito',concluida:'Concluídas',arquivada:'Arquivadas'};
+      const cFiltradas = todasCargas.filter(c=>c.status===filtroStatus);
+      filtroDetalhe = `
+      <div class="sec" style="border:1px solid var(--p2);border-radius:12px;padding:0 0 8px;">
+        <div class="sec-t" style="color:var(--p2);display:flex;justify-content:space-between;align-items:center;">
+          ${statusLabel[filtroStatus]||filtroStatus} (${cFiltradas.length})
+          <button class="btn-sm" onclick="loadDashboard(null,${mesSel},${anoSel})" style="font-size:11px;background:var(--border);color:var(--text);">✕ Limpar filtro</button>
+        </div>
+        ${cFiltradas.map(c=>`
+          <div class="li" onclick="abrirCarga('${c.id}')" style="cursor:pointer;">
+            <div class="li-body">
+              <div class="li-title">${c.embarque||c.id} · ${c.rota||'—'}</div>
+              <div class="li-sub">${transpMap[c.transportadoraId]||'—'} · ${fmtKg(c.pesoLiq)} · ${fmtMoeda(c.valorFrete)}</div>
+            </div>
+            <div class="li-right"><span class="pill pb">${c.status}</span></div>
+          </div>`).join('')}
+      </div>`;
+    }
+
+    // ── Seletor de mês/ano
+    const anoOpts = [anoSel-1, anoSel, anoSel+1].map(a=>`<option value="${a}" ${a===anoSel?'selected':''}>${a}</option>`).join('');
+    const mesOpts = meses.map((m,i)=>`<option value="${i}" ${i===mesSel?'selected':''}>${m}</option>`).join('');
 
     $('dashContent').innerHTML = `
-    <div style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 0 4px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 0 6px;">
+      <select onchange="loadDashboard(null,this.value,document.getElementById('dashAno').value)" style="padding:5px 8px;border-radius:8px;background:var(--card);color:var(--text);border:1px solid var(--border);font-size:13px;">${mesOpts}</select>
+      <select id="dashAno" onchange="loadDashboard(null,document.querySelector('#dashContent select').value,this.value)" style="padding:5px 8px;border-radius:8px;background:var(--card);color:var(--text);border:1px solid var(--border);font-size:13px;">${anoOpts}</select>
       <button class="btn-sm btn-wa" onclick="waRelatorioExec()">📱 WA Relatório</button>
-      <button class="btn-sm btn-blue" onclick="window.print()">🖨️ Imprimir</button>
-      <button class="btn-sm btn-green" onclick="exportarTudo()">📥 Exportar tudo (CSV)</button>
-      <button class="btn-sm btn-purple" onclick="exportarNFes()">📄 Exportar NFes</button>
+      <button class="btn-sm btn-green" onclick="exportarTudo()">📥 Exportar CSV</button>
     </div>
+    ${filtroDetalhe}
+    <div style="font-size:11px;color:var(--muted);margin:4px 0 8px;">KPIs gerais (todos os períodos) · Tabelas = ${nomeMes} · Clique num KPI para filtrar</div>
     <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-v">${cargas.length}</div><div class="kpi-l">Total embarques</div></div>
-      <div class="kpi"><div class="kpi-v">${cAtivas.length}</div><div class="kpi-l">Cargas ativas</div></div>
-      <div class="kpi"><div class="kpi-v">${cProvs.length}</div><div class="kpi-l">Provisórias</div></div>
-      <div class="kpi"><div class="kpi-v">${cConcluidas.length}</div><div class="kpi-l">Concluídas</div></div>
-      <div class="kpi"><div class="kpi-v">${fmtKg(totalKg)}</div><div class="kpi-l">Kg transportado</div></div>
+      <div class="kpi" onclick="loadDashboard('planejada',${mesSel},${anoSel})" style="cursor:pointer;${filtroStatus==='planejada'?'border:2px solid var(--p2);':''}" title="Clique para ver detalhes">
+        <div class="kpi-v">${cAtivas.length}</div><div class="kpi-l">Cargas ativas</div></div>
+      <div class="kpi" onclick="loadDashboard('provisoria',${mesSel},${anoSel})" style="cursor:pointer;${filtroStatus==='provisoria'?'border:2px solid var(--amber);':''}" title="Clique para ver detalhes">
+        <div class="kpi-v">${cProvs.length}</div><div class="kpi-l">Provisórias</div></div>
+      <div class="kpi" onclick="loadDashboard('concluida',${mesSel},${anoSel})" style="cursor:pointer;${filtroStatus==='concluida'?'border:2px solid var(--green);':''}" title="Clique para ver detalhes">
+        <div class="kpi-v">${cConcluidas.length}</div><div class="kpi-l">Concluídas</div></div>
+      <div class="kpi" onclick="loadDashboard('em_transito',${mesSel},${anoSel})" style="cursor:pointer;${filtroStatus==='em_transito'?'border:2px solid var(--p1);':''}" title="Clique para ver detalhes">
+        <div class="kpi-v">${todasCargas.filter(c=>c.status==='em_transito').length}</div><div class="kpi-l">Em trânsito</div></div>
+      <div class="kpi"><div class="kpi-v">${fmtKg(kgExibir)}</div><div class="kpi-l">Kg transportado (total)</div></div>
       <div class="kpi"><div class="kpi-v">${fmtMoeda(totalFrete)}</div><div class="kpi-l">Total fretes</div></div>
       <div class="kpi"><div class="kpi-v">R$ ${custoKg}/kg</div><div class="kpi-l">R$/kg médio</div></div>
       <div class="kpi"><div class="kpi-v">${impacto}%</div><div class="kpi-l">Impacto logístico</div></div>
       <div class="kpi"><div class="kpi-v">${fmtMoeda(totalFaturamento)}</div><div class="kpi-l">Faturamento NFs</div></div>
       <div class="kpi"><div class="kpi-v">★ ${mediaScore}</div><div class="kpi-l">Satisfação média</div></div>
       <div class="kpi"><div class="kpi-v">${motAtivos.length}</div><div class="kpi-l">Motoristas ativos</div></div>
-      <div class="kpi"><div class="kpi-v">${cMes.length}</div><div class="kpi-l">Embarques este mês</div></div>
+      <div class="kpi"><div class="kpi-v">${todasCargas.length}</div><div class="kpi-l">Total embarques</div></div>
     </div>
     <div class="sec" style="margin-top:8px;padding:10px 14px;background:rgba(59,130,246,.06);border-radius:10px;border:1px solid rgba(59,130,246,.15);">
-      <div class="sec-t" style="font-size:11px;color:var(--p2);margin-bottom:6px;">MÊS ATUAL</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;">
-        <span><strong>${cMes.length}</strong> embarques</span>
-        <span><strong>${fmtKg(kgMes)}</strong></span>
+      <div class="sec-t" style="font-size:11px;color:var(--p2);margin-bottom:6px;">PERÍODO: ${nomeMes}</div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:13px;">
+        <span><strong>${cargasPeriodo.length}</strong> embarques</span>
+        <span><strong>${fmtKg(kgMesExibir)}</strong></span>
         <span><strong>${fmtMoeda(freteMes)}</strong> em fretes</span>
-        <span><strong>${kgMes>0?'R$ '+(freteMes/kgMes).toFixed(4)+'/kg':'—'}</strong></span>
+        <span><strong>${kgMesExibir>0?'R$ '+(freteMes/kgMesExibir).toFixed(4)+'/kg':'—'}</strong></span>
       </div>
     </div>
-    <div class="sec"><div class="sec-t">Por Transportadora</div>${transpRows||'<div style="color:var(--muted);padding:8px 0;">Nenhum dado.</div>'}</div>
-    <div class="sec"><div class="sec-t">Por UF (Top 10)</div>${ufRows||'<div style="color:var(--muted);padding:8px 0;">Nenhum dado.</div>'}</div>
-    <div class="sec"><div class="sec-t">Por Região</div>${regRows||'<div style="color:var(--muted);padding:8px 0;">Nenhum dado.</div>'}</div>
-    <div class="sec"><div class="sec-t">Top 5 Motoristas</div>${motRows||'<div style="color:var(--muted);padding:8px 0;">Nenhum dado.</div>'}</div>
+    <div class="sec"><div class="sec-t">Por Transportadora · ${nomeMes}</div>${transpRows||'<div style="color:var(--muted);padding:8px 0;">Nenhum dado neste período.</div>'}</div>
+    <div class="sec"><div class="sec-t">Por UF (Top 10) · ${nomeMes}</div>${ufRows||'<div style="color:var(--muted);padding:8px 0;">Nenhum dado.</div>'}</div>
+    <div class="sec"><div class="sec-t">Por Região · ${nomeMes}</div>${regRows||'<div style="color:var(--muted);padding:8px 0;">Nenhum dado.</div>'}</div>
+    <div class="sec"><div class="sec-t">Top 5 Motoristas · ${nomeMes}</div>${motRows||'<div style="color:var(--muted);padding:8px 0;">Nenhum dado.</div>'}</div>
     `;
   } catch(e) {
-    $('dashContent').innerHTML = '<div style="padding:20px;color:var(--red);">Erro ao carregar dashboard: ' + e.message + '</div>';
+    $('dashContent').innerHTML = '<div style="padding:20px;color:var(--red);">Erro: ' + e.message + '</div>';
   }
 }
 
