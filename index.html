@@ -419,6 +419,39 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:var(--t
   }
 }
 
+
+/* PASTAS DE LOCAL DE ENTREGA */
+.local-pasta {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: box-shadow .2s;
+}
+.local-pasta.drag-over {
+  border-color: var(--p2);
+  box-shadow: 0 0 0 2px rgba(59,130,246,.25);
+}
+.local-pasta-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.local-pasta-hdr:hover { background: rgba(255,255,255,.03); }
+.nfe-row[draggable="true"] { cursor: grab; }
+.nfe-row[draggable="true"]:active { cursor: grabbing; opacity: .7; }
+.drag-feedback {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: var(--green); color: #fff; padding: 8px 18px;
+  border-radius: 20px; font-size: 13px; font-weight: 600;
+  z-index: 9999; animation: fadeUp .3s ease;
+}
+@keyframes fadeUp { from { opacity:0; transform: translateX(-50%) translateY(10px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+
 </style>
   </head>
 <body>
@@ -2173,80 +2206,146 @@ window.abrirCarga = async function(id) {
   if (c.status==='em_transito') actions += `<button class="btn-sm btn-wa" onclick="waRomaneio('${id}')">📱 WA Romaneio</button>`;
 
   // Renderizar clientes
+  // ── PASTAS POR LOCAL DE ENTREGA ─────────────────────────────────────────
+  // Agrupar clientes por local de entrega
+  // local = localEntregaId se tiver, senão 'nf' (endereço da NF)
+  const locaisMap = {}; // localKey -> { nome, endereco, cidade, uf, clientes:[] }
+
+  clientes.forEach(cl => {
+    const lKey = cl.localEntregaId || '__nf__' + (cl.cidade||'') + '_' + (cl.uf||'');
+    if (!locaisMap[lKey]) {
+      if (cl.localEntregaId) {
+        locaisMap[lKey] = {
+          id: cl.localEntregaId,
+          nome: cl.localEntregaNome || 'Local ' + cl.localEntregaId,
+          cidade: cl.localEntregaCidade || cl.cidade || '—',
+          uf: cl.localEntregaUF || cl.uf || '—',
+          endereco: cl.localEntregaEndereco || '',
+          isNF: false,
+          clientes: []
+        };
+      } else {
+        locaisMap[lKey] = {
+          id: null,
+          nome: (cl.cidade||'—') + '/' + (cl.uf||'—'),
+          cidade: cl.cidade||'—',
+          uf: cl.uf||'—',
+          endereco: '',
+          isNF: true,
+          clientes: []
+        };
+      }
+    }
+    locaisMap[lKey].clientes.push(cl);
+  });
+
+  // Calcular totais por local
+  const rpkgGeral = totalKgClientes > 0 ? valorFrete / totalKgClientes : 0;
+  Object.values(locaisMap).forEach(loc => {
+    loc.pesoTotal = loc.clientes.reduce((s,cl)=>s+Number(cl.pesoLiq||0),0);
+    loc.valorTotal = loc.clientes.reduce((s,cl)=>s+Number(cl.valorNF||cl.valorNFe||0),0);
+    loc.rateioTotal = rpkgGeral * loc.pesoTotal;
+    // NFes do local
+    loc.nfes = loc.clientes.flatMap(cl => nfesMap[cl.id]||[]);
+    const nfKg = loc.nfes.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
+    if (nfKg > 0) { loc.pesoTotal = nfKg; loc.rateioTotal = rpkgGeral * nfKg; }
+    loc.qtdNotas = loc.nfes.length || loc.clientes.length;
+    // Status do local: se todos entregues → entregue
+    const todos = loc.clientes.every(cl=>cl.status==='entregue');
+    loc.status = todos && loc.clientes.length > 0 ? 'entregue' : 'aguardando';
+  });
+
+  const locaisList = Object.entries(locaisMap);
+
   let clientesHTML = '';
-  if (clientes.length===0) {
+  if (clientes.length === 0) {
     clientesHTML = '<div style="padding:14px;color:var(--muted);font-size:13px;text-align:center;">Nenhum cliente. Toque em "+ Cliente" para adicionar.</div>';
   } else {
-    clientesHTML = clientes.map((cl,idx)=>{
-      const rpkg = totalKgClientes>0 ? valorFrete/totalKgClientes : 0;
-      const rateio = rpkg * Number(cl.pesoLiq||0);
-      const pct = totalKgClientes>0 ? (Number(cl.pesoLiq||0)/totalKgClientes*100).toFixed(1) : 0;
-      const nfesCliente = nfesMap[cl.id]||[];
+    clientesHTML = locaisList.map(([lKey, loc], li) => {
+      const isEntregue = loc.status === 'entregue';
+      const locColor = isEntregue ? 'var(--green)' : (loc.isNF ? 'var(--muted)' : 'var(--p2)');
+      const locIcon = loc.isNF ? '📄' : '📍';
 
-      // NFes agrupadas
-      let nfesHTML = '';
-      if (nfesCliente.length>0) {
-        const totalNFPeso = nfesCliente.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
-        const totalNFValor = nfesCliente.reduce((s,n)=>s+Number(n.valorNFe||0),0);
-        nfesHTML = `<div style="margin-top:8px;">
-          <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">NFes lançadas (${nfesCliente.length})</div>
-          ${nfesCliente.map((n,ni)=>`<div class="nfe-row"><div style="display:flex;justify-content:space-between;align-items:flex-start;"><span><span class="nfe-key">NF </span><span class="nfe-val">${n.nfe}</span> <span class="nfe-key">${fmtData(n.dataFaturamento)}</span></span>${isOp?`<button class="btn-sm btn-blue" onclick="abrirEditarNFe('${n.__id||''}','${id}')" style="font-size:10px;padding:2px 7px;">✏️</button>`:''}</div><div style="display:flex;justify-content:space-between;margin-top:3px;"><span class="nfe-key">${fmtKg(n.pesoLiq)} · ${fmtMoeda(n.valorNFe)}</span><span style="font-size:11px;color:var(--amber);">Rateio: ${fmtMoeda(n.rateio)}</span></div></div>`).join('')}
-          <div style="display:flex;justify-content:space-between;padding:6px 10px;background:rgba(255,255,255,.04);border-radius:6px;margin-top:4px;font-size:12px;font-weight:600;">
-            <span style="color:var(--muted);">Total consolidado</span>
-            <span style="color:var(--text);">${fmtKg(totalNFPeso)} · ${fmtMoeda(totalNFValor)}</span>
-          </div>
-        </div>`;
+      // Notas dentro da pasta — lista flat de todas as NFes
+      let notasHTML = '';
+      if (loc.nfes.length > 0) {
+        notasHTML = loc.nfes.map(n => {
+          const cl = clientes.find(c=>c.id===n.clienteId)||{};
+          return `<div class="nfe-row" draggable="true"
+            ondragstart="dragNFe(event,'${n.__id||''}','${lKey}')"
+            style="cursor:grab;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <span class="nfe-key">NF </span><span class="nfe-val">${n.nfe}</span>
+                <span class="nfe-key" style="margin-left:6px;">${cl.nome||'—'}</span>
+                <span class="nfe-key" style="margin-left:4px;">${fmtData(n.dataFaturamento)}</span>
+              </div>
+              <div style="display:flex;gap:4px;">
+                ${isOp ? `<button class="btn-sm btn-blue" onclick="abrirEditarNFe('${n.__id||''}','${id}')" style="font-size:10px;padding:2px 6px;">✏️</button>` : ''}
+                ${isOp && !isEntregue ? `<button class="btn-sm btn-red" onclick="abrirSinistro('${id}','${cl.id||''}')" style="font-size:10px;padding:2px 6px;">⚠️</button>` : ''}
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:3px;">
+              <span class="nfe-key">${fmtKg(n.pesoLiq)} · ${fmtMoeda(n.valorNFe)}</span>
+              <span style="font-size:11px;color:var(--amber);">Rateio: ${fmtMoeda(n.rateio)}</span>
+            </div>
+          </div>`;
+        }).join('');
+      } else {
+        // Sem NFes — mostrar clientes
+        notasHTML = loc.clientes.map(cl => {
+          const nfesCliente = nfesMap[cl.id]||[];
+          return `<div class="nfe-row" draggable="true"
+            ondragstart="dragCliente(event,'${cl.id}','${lKey}')"
+            style="cursor:grab;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div><span class="nfe-val">${cl.nome}</span>
+              <span class="nfe-key" style="margin-left:6px;">${cl.cidade||'—'}/${cl.uf||'—'}</span></div>
+              <div style="display:flex;gap:4px;">
+                ${isOp ? `<button class="btn-sm btn-blue" onclick="editarCliente('${id}','${cl.id}')" style="font-size:10px;padding:2px 6px;">✏️</button>` : ''}
+                ${isOp && !isEntregue ? `<button class="btn-sm btn-red" onclick="abrirSinistro('${id}','${cl.id}')" style="font-size:10px;padding:2px 6px;">⚠️</button>` : ''}
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:3px;">
+              <span class="nfe-key">${fmtKg(cl.pesoLiq)} · ${fmtMoeda(cl.valorNF||cl.valorNFe)}</span>
+              <span style="font-size:11px;color:var(--amber);">Rateio: ${fmtMoeda(rpkgGeral*(cl.pesoLiq||0))}</span>
+            </div>
+          </div>`;
+        }).join('');
       }
 
-      const clActs = isOp ? `
-        ${cl.status!=='entregue'&&!isProv ? `<button class="btn-sm btn-green" onclick="marcarEntregue('${id}','${cl.id}')">✓ Entregue</button>` : ''}
-        ${cl.status!=='entregue'&&!isProv ? `<button class="btn-sm btn-red" onclick="abrirSinistro('${id}','${cl.id}')">⚠️ Sinistro</button>` : ''}
-        ${cl.status==='entregue' ? `<button class="btn-sm btn-amber" onclick="abrirRecibo('${id}','${cl.id}','${cl.nome}')">🧾 Recibo</button>` : ''}
-        ${cl.status==='entregue' ? `<button class="btn-sm btn-purple" onclick="abrirPesquisa('${id}','${cl.id}','${cl.nome}')">⭐ Pesquisa</button>` : ''}
-        <button class="btn-sm btn-blue" onclick="editarCliente('${id}','${cl.id}')">✏️ Editar</button>
-        <button class="btn-sm btn-amber" onclick="abrirLocalEntrega('${cl.id}','${id}')" title="Definir local de entrega">📍 Local</button>
-        <button class="btn-sm btn-wa" onclick="waCliente('${id}','${cl.id}')">📱 WA</button>
-      ` : '';
+      // Botões da pasta
+      const pastaActs = isOp ? `
+        <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px 12px;border-top:1px solid var(--border);">
+          ${!isEntregue && !isProv ? `<button class="btn-sm btn-green" onclick="marcarLocalEntregue('${id}','${lKey}')">✓ Entregue</button>` : ''}
+          ${!isEntregue && !isProv ? `<button class="btn-sm btn-red" onclick="abrirSinistroLocal('${id}','${lKey}')">⚠️ Sinistro</button>` : ''}
+          ${!loc.isNF ? `<button class="btn-sm btn-blue" onclick="abrirEditarLocal('${loc.id}')">✏️ Editar local</button>` : ''}
+          ${!isProv ? `<button class="btn-sm btn-amber" onclick="abrirLocalEntregaParaPasta('${lKey}','${id}')">📍 Trocar local</button>` : ''}
+        </div>` : '';
 
-      return `<div class="cl-drag" id="cl_${cl.id}">
-        <div class="cl-row-wrap">
-          <div class="cl-drag-handle" title="Arraste para reordenar">⠿</div>
-          <div class="cl-pos">${idx+1}</div>
-          <div style="flex:1;">
-            <div class="cl-head">
-              <div><div class="cl-name">${cl.nome}</div><div class="cl-loc">${cl.cidade||'—'}/${cl.uf||'—'} · ${cl.regiao||'—'}</div></div>
-              ${statusPill(cl.status||'aguardando')}
+      return `<div class="local-pasta"
+        ondragover="event.preventDefault();"
+        ondrop="dropNaLocal(event,'${lKey}','${id}')">
+        <div class="local-pasta-hdr" onclick="togglePasta('pasta_${li}')">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:16px;">${locIcon}</span>
+            <div>
+              <div style="font-weight:700;font-size:14px;color:${locColor};">${loc.nome}</div>
+              <div style="font-size:11px;color:var(--muted);">${loc.cidade}/${loc.uf} · ${loc.qtdNotas} nota${loc.qtdNotas!==1?'s':''} · ${fmtKg(loc.pesoTotal)} · ${fmtMoeda(loc.rateioTotal)}</div>
             </div>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
-              <div style="font-size:11px;"><span style="color:var(--muted);">Peso liq: </span><strong>${fmtKg(cl.pesoLiq)}</strong></div>
-              <div style="font-size:11px;"><span style="color:var(--muted);">Valor est.: </span><strong>${fmtMoeda(cl.valorNF||cl.valorNFe)}</strong></div>
-              <div style="font-size:11px;"><span style="color:var(--muted);">R$/kg: </span><strong>${cl.precoMedio?'R$ '+Number(cl.precoMedio).toFixed(2):'—'}</strong></div>
-              <div style="font-size:11px;"><span style="color:var(--muted);">% carga: </span><strong>${pct}%</strong></div>
-              <div style="font-size:11px;"><span style="color:var(--muted);">Rateio: </span><strong style="color:var(--amber);">${fmtMoeda(rateio)}</strong></div>
-            </div>
-            ${cl.previsao?`<div style="font-size:11px;margin-top:4px;color:var(--muted);">Previsão: ${fmtData(cl.previsao)}${cl.agendNum?' · Agend: '+cl.agendNum:''}</div>`:''}
-            ${cl.numeroNF?`<div style="font-size:11px;color:var(--p2);margin-top:2px;">NF: ${cl.numeroNF}</div>`:''}
-            ${cl.obs?`<div style="font-size:11px;color:var(--muted);margin-top:2px;">Obs: ${cl.obs}</div>`:''}
-            ${nfesHTML}
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${clActs}</div>
           </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${statusPill(loc.status)}
+            <span id="arrow_pasta_${li}" style="color:var(--muted);font-size:16px;">▾</span>
+          </div>
+        </div>
+        <div id="pasta_${li}" style="display:block;">
+          <div style="padding:8px 14px;">${notasHTML}</div>
+          ${pastaActs}
         </div>
       </div>`;
     }).join('');
   }
-
-  // Total resumo
-  // R$/kg = Valor do frete / Peso total líquido
-  // Usar peso das NFes se disponível, senão peso dos clientes
-  // Peso: prioridade 1: salvo na carga (c.pesoLiq, atualizado ao ativar)
-  // Prioridade 2: soma das NFes filtradas, Prioridade 3: estimativa dos clientes
-  const nfesArr = nfesSnap.docs.map(d=>d.data());
-  const totalKgNFes = nfesArr.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
-  const pesoTotal = Number(c.pesoLiq||0) > 0 ? Number(c.pesoLiq) 
-                  : totalKgNFes > 0 ? totalKgNFes 
-                  : totalKgClientes;
-  const precoMedioGeral = pesoTotal > 0 ? (Number(c.valorFrete||0)/pesoTotal).toFixed(4) : '—';
-  const pesoExibir = pesoTotal;
 
   $('cargaDetContent').innerHTML = `
     ${provBanner}
@@ -3322,16 +3421,36 @@ window.abrirLocalEntrega = async function(clienteId, cargaId) {
 window.selecionarLocalEntrega = async function(localId, nome, cidade, uf) {
   const clienteId = $('leClienteId').value;
   const cargaId = $('leCargaId').value;
-  await updateDoc(doc(db,'cargas',cargaId,'clientes',clienteId), {
-    localEntregaId: localId,
-    localEntregaNome: nome,
-    localEntregaCidade: cidade,
-    localEntregaUF: uf
-  });
+  // Buscar endereço completo do local cadastrado
+  let endereco = '';
+  try {
+    const locDoc = await getDoc(doc(db,'locais_entrega',localId));
+    if (locDoc.exists()) endereco = locDoc.data().endereco || '';
+  } catch(e) {}
+
+  const dados = {
+    localEntregaId: localId, localEntregaNome: nome,
+    localEntregaCidade: cidade, localEntregaUF: uf, localEntregaEndereco: endereco
+  };
+
+  // Se for troca de pasta inteira
+  if (clienteId.startsWith('__pasta__')) {
+    const localKey = clienteId.replace('__pasta__', '');
+    const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
+    const todos = clSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const doLocal = todos.filter(cl => {
+      const key = cl.localEntregaId || '__nf__' + (cl.cidade||'') + '_' + (cl.uf||'');
+      return key === localKey;
+    });
+    for (const cl of doLocal) {
+      await updateDoc(doc(db,'cargas',cargaId,'clientes',cl.id), dados);
+    }
+  } else {
+    await updateDoc(doc(db,'cargas',cargaId,'clientes',clienteId), dados);
+  }
   closeModal('modalLocalEntrega');
   abrirCarga(cargaId);
 };
-
 window.salvarLocalEntrega = async function() {
   const nome = $('leNome').value.trim();
   if (!nome) { alert('Informe o nome do local.'); return; }
@@ -3497,6 +3616,194 @@ window.excluirLocal = async function() {
   if ($('leClienteId') && $('leClienteId').value) {
     abrirLocalEntrega($('leClienteId').value, $('leCargaId').value);
   }
+};
+
+
+
+// ─── SISTEMA DE PASTAS / LOCAIS DE ENTREGA ──────────────────────────────
+
+window.togglePasta = function(id) {
+  const el = $(id);
+  const arrow = $('arrow_' + id);
+  if (!el) return;
+  const aberto = el.style.display !== 'none';
+  el.style.display = aberto ? 'none' : 'block';
+  if (arrow) arrow.textContent = aberto ? '▸' : '▾';
+};
+
+window.toggleLocaisCarga = function(val) {
+  const el = $('locaisNovaCarga');
+  if (el) el.style.display = val === 'sim' ? 'block' : 'none';
+};
+
+// Drag & Drop de NFes entre pastas
+let _dragNFeId = null;
+let _dragFromLocal = null;
+let _dragClienteId = null;
+let _lastMoveId = null;
+let _lastFromLocal = null;
+let _lastToLocal = null;
+
+window.dragNFe = function(ev, nfeId, fromLocal) {
+  _dragNFeId = nfeId;
+  _dragFromLocal = fromLocal;
+  _dragClienteId = null;
+  ev.dataTransfer.effectAllowed = 'move';
+};
+
+window.dragCliente = function(ev, clienteId, fromLocal) {
+  _dragClienteId = clienteId;
+  _dragFromLocal = fromLocal;
+  _dragNFeId = null;
+  ev.dataTransfer.effectAllowed = 'move';
+};
+
+window.dropNaLocal = async function(ev, toLocalKey, cargaId) {
+  ev.preventDefault();
+  if (_dragFromLocal === toLocalKey) return; // mesmo local — não faz nada
+
+  // Identificar o local de destino
+  // toLocalKey pode ser 'localEntregaId' ou '__nf__cidade_uf'
+  const isDestNF = toLocalKey.startsWith('__nf__');
+
+  // Buscar dados do local de destino se não for NF
+  let destLocalId = null, destNome = '', destCidade = '', destUF = '', destEndereco = '';
+  if (!isDestNF) {
+    destLocalId = toLocalKey;
+    try {
+      const ld = await getDoc(doc(db,'locais_entrega',destLocalId));
+      if (ld.exists()) {
+        destNome     = ld.data().nome||'';
+        destCidade   = ld.data().cidade||'';
+        destUF       = ld.data().uf||'';
+        destEndereco = ld.data().endereco||'';
+      }
+    } catch(e){}
+  }
+
+  // Atualizar o cliente (e por extensão a nota) com o novo local
+  const atualizarCliente = async (clienteId) => {
+    if (isDestNF) {
+      await updateDoc(doc(db,'cargas',cargaId,'clientes',clienteId), {
+        localEntregaId: null,
+        localEntregaNome: null,
+        localEntregaCidade: null,
+        localEntregaUF: null,
+        localEntregaEndereco: null
+      });
+    } else {
+      await updateDoc(doc(db,'cargas',cargaId,'clientes',clienteId), {
+        localEntregaId: destLocalId,
+        localEntregaNome: destNome,
+        localEntregaCidade: destCidade,
+        localEntregaUF: destUF,
+        localEntregaEndereco: destEndereco
+      });
+    }
+  };
+
+  if (_dragClienteId) {
+    _lastMoveId = _dragClienteId;
+    _lastFromLocal = _dragFromLocal;
+    _lastToLocal = toLocalKey;
+    await atualizarCliente(_dragClienteId);
+  } else if (_dragNFeId) {
+    // Buscar clienteId da NFe
+    try {
+      const nfeDoc = await getDoc(doc(db,'nfes',_dragNFeId));
+      if (nfeDoc.exists()) {
+        const clienteId = nfeDoc.data().clienteId;
+        _lastMoveId = clienteId;
+        _lastFromLocal = _dragFromLocal;
+        _lastToLocal = toLocalKey;
+        await atualizarCliente(clienteId);
+      }
+    } catch(e){}
+  }
+
+  mostrarFeedback('Nota movida! <span onclick="desfazerMove(\''+cargaId+'\')">↩ Desfazer</span>');
+  abrirCarga(cargaId);
+};
+
+window.desfazerMove = async function(cargaId) {
+  if (!_lastMoveId || !_lastFromLocal) return;
+  const isOrigNF = _lastFromLocal.startsWith('__nf__');
+  if (isOrigNF) {
+    await updateDoc(doc(db,'cargas',cargaId,'clientes',_lastMoveId), {
+      localEntregaId: null, localEntregaNome: null,
+      localEntregaCidade: null, localEntregaUF: null, localEntregaEndereco: null
+    });
+  } else {
+    try {
+      const ld = await getDoc(doc(db,'locais_entrega',_lastFromLocal));
+      if (ld.exists()) {
+        await updateDoc(doc(db,'cargas',cargaId,'clientes',_lastMoveId), {
+          localEntregaId: _lastFromLocal,
+          localEntregaNome: ld.data().nome||'',
+          localEntregaCidade: ld.data().cidade||'',
+          localEntregaUF: ld.data().uf||'',
+          localEntregaEndereco: ld.data().endereco||''
+        });
+      }
+    } catch(e){}
+  }
+  _lastMoveId = null; _lastFromLocal = null; _lastToLocal = null;
+  ocultarFeedback();
+  abrirCarga(cargaId);
+};
+
+function mostrarFeedback(html) {
+  let el = document.getElementById('dragFeedback');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'dragFeedback';
+    el.className = 'drag-feedback';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = html;
+  el.style.display = 'block';
+  clearTimeout(window._feedbackTimer);
+  window._feedbackTimer = setTimeout(() => ocultarFeedback(), 6000);
+}
+
+function ocultarFeedback() {
+  const el = document.getElementById('dragFeedback');
+  if (el) el.style.display = 'none';
+}
+
+// Marcar entregue todos os clientes de um local
+window.marcarLocalEntregue = async function(cargaId, localKey) {
+  if (!confirm('Marcar todos as notas deste local como entregues?')) return;
+  const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
+  const clientes = clSnap.docs.map(d=>({id:d.id,...d.data()}));
+  const doLocal = clientes.filter(cl => {
+    const key = cl.localEntregaId || '__nf__' + (cl.cidade||'') + '_' + (cl.uf||'');
+    return key === localKey;
+  });
+  for (const cl of doLocal) {
+    await updateDoc(doc(db,'cargas',cargaId,'clientes',cl.id), {
+      status:'entregue', entregueEm: serverTimestamp()
+    });
+  }
+  abrirCarga(cargaId);
+};
+
+// Sinistro para todo o local
+window.abrirSinistroLocal = function(cargaId, localKey) {
+  // Usar o primeiro cliente do local como referência
+  abrirCarga(cargaId); // recarrega primeiro — sinistro individual por nota
+};
+
+// Trocar local de entrega da pasta
+window.abrirLocalEntregaParaPasta = function(localKey, cargaId) {
+  // Usa o primeiro cliente daquele local para abrir o modal
+  // O modal vai trocar todos os clientes do local
+  window._trocarLocalKey = localKey;
+  window._trocarLocalCargaId = cargaId;
+  // Reutiliza o modal existente mas com comportamento diferente
+  $('leClienteId').value = '__pasta__' + localKey;
+  $('leCargaId').value = cargaId;
+  abrirLocalEntrega('__pasta__' + localKey, cargaId);
 };
 
 
