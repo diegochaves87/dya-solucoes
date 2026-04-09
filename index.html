@@ -1641,8 +1641,8 @@ async function loadCargas() {
   let cargas = snap.docs.map(d=>({id:d.id,...d.data()}))
     .filter(c=>!c.arquivado)
     .sort((a,b)=>{
-      const ta = a.criadoEm?.()?a.criadoEm.toDate().getTime():(a.criadoEm?._ts||0);
-      const tb = b.criadoEm?.()?b.criadoEm.toDate().getTime():(b.criadoEm?._ts||0);
+      const ta = a.criadoEm && a.criadoEm.toDate ? a.criadoEm.toDate().getTime() : (a.criadoEm?._ts||0);
+      const tb = b.criadoEm && b.criadoEm.toDate ? b.criadoEm.toDate().getTime() : (b.criadoEm?._ts||0);
       return tb - ta;
     });
   if (cargaFiltro==='ativas') cargas = cargas.filter(c=>['planejada','em_transito'].includes(c.status));
