@@ -2665,225 +2665,138 @@ window.salvarPesquisa = async function(cargaId, clienteId, nome) {
 // ─── DASHBOARD ───────────────────────────────────────────
 async function loadDashboard() {
   $('dashContent').innerHTML = '<div class="loading"><div class="spin"></div></div>';
-  const [cargasSnap, motSnap, cteSnap, pesqSnap, nfesSnap] = await Promise.all([
-    getDocs(collection(db,'cargas')),
-    getDocs(query(collection(db,'motoristas'), where('status','==','ativo'))),
-    getDocs(query(collection(db,'ctes'), where('status','==','pendente'))),
-    getDocs(collection(db,'pesquisas')),
-    getDocs(collection(db,'nfes'))
-  ]);
+  try {
+    // Buscar tudo sem where() — filtrar localmente
+    const [cargasSnap, motSnap, transpSnap, nfesSnap, pesqSnap] = await Promise.all([
+      getDocs(collection(db,'cargas')),
+      getDocs(collection(db,'motoristas')),
+      getDocs(collection(db,'transportadoras')),
+      getDocs(collection(db,'nfes')),
+      getDocs(collection(db,'pesquisas'))
+    ]);
 
-  const cargas = cargasSnap.docs.map(d=>d.data());
-  const nfes = nfesSnap.docs.map(d=>d.data());
-  const ativas = cargas.filter(c=>['planejada','em_transito'].includes(c.status)).length;
-  const provs = cargas.filter(c=>c.status==='provisoria').length;
-  const concluidas = cargas.filter(c=>c.status==='concluida').length;
+    const cargas = cargasSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const nfes   = nfesSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const transp = transpSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const mots   = motSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const pesqs  = pesqSnap.docs.map(d=>d.data());
 
-  // Totais gerais de cargas ativas/concluidas (com NF)
-  let totalKg=0, totalFrete=0, totalFaturamento=0;
-  nfes.forEach(n=>{ totalKg+=Number(n.pesoLiq||0); totalFaturamento+=Number(n.valorNFe||0); });
-  cargas.filter(c=>c.status!=='provisoria').forEach(c=>{ totalFrete+=Number(c.valorFrete||0); });
-  const custoKg = totalKg>0 ? (totalFrete/totalKg).toFixed(2) : '0.00';
-  const impactoLogistico = totalFaturamento>0 ? (totalFrete/totalFaturamento*100).toFixed(1) : '0.0';
+    // ── KPIs de cargas
+    const cAtivas     = cargas.filter(c=>['planejada','em_transito'].includes(c.status));
+    const cProvs      = cargas.filter(c=>c.status==='provisoria');
+    const cConcluidas = cargas.filter(c=>c.status==='concluida');
+    const cComFrete   = cargas.filter(c=>c.status!=='provisoria');
+    const motAtivos   = mots.filter(m=>!m.status||m.status==='ativo');
 
-  // Por transportadora
-  const byTransp = {};
-  for (const carga of cargas.filter(c=>c.status!=='provisoria')) {
-    const tid = carga.transportadoraId||'sem_transp';
-    if (!byTransp[tid]) byTransp[tid] = { carregamentos:0, kg:0, frete:0, nome:'—' };
-    byTransp[tid].carregamentos++;
-    byTransp[tid].frete += Number(carga.valorFrete||0);
-    if (carga.transportadoraId) {
-      try { const td = await getDoc(doc(db,'transportadoras',carga.transportadoraId)); byTransp[tid].nome = (td.data() && td.data().apelido) || '—'; } catch(e){}
-    } else { byTransp[tid].nome = 'Sem transportadora'; }
-  }
-  nfes.forEach(n=>{ const tid = n.transportadoraId||'sem_transp'; if(byTransp[tid]) byTransp[tid].kg += Number(n.pesoLiq||0); });
+    // ── Totais financeiros — usar dados das NFes
+    let totalKg=0, totalFrete=0, totalFaturamento=0;
+    nfes.forEach(n=>{ totalKg+=Number(n.pesoLiq||0); totalFaturamento+=Number(n.valorNFe||0); });
+    cComFrete.forEach(c=>{ totalFrete+=Number(c.valorFrete||0); });
+    const custoKg = totalKg>0 ? (totalFrete/totalKg).toFixed(4) : '0.00';
+    const impacto = totalFaturamento>0 ? (totalFrete/totalFaturamento*100).toFixed(1) : '0.0';
+    const mediaScore = pesqs.length>0 ? (pesqs.reduce((a,b)=>a+(Number(b.notaGeral)||0),0)/pesqs.length).toFixed(1) : '—';
 
-  // Por UF
-  const byUF = {};
-  nfes.forEach(n=>{ const uf=n.uf||'—'; if(!byUF[uf]) byUF[uf]={kg:0,faturamento:0,count:0}; byUF[uf].kg+=Number(n.pesoLiq||0); byUF[uf].faturamento+=Number(n.valorNFe||0); byUF[uf].count++; });
+    // ── Por Transportadora
+    const byTransp = {};
+    const transpMap = {};
+    transp.forEach(t=>{ transpMap[t.id] = t.apelido||t.nome||'—'; });
+    cComFrete.forEach(c=>{
+      const tid = c.transportadoraId||'__sem';
+      if (!byTransp[tid]) byTransp[tid] = { nome: transpMap[tid]||'Sem transportadora', cargas:0, kg:0, frete:0 };
+      byTransp[tid].cargas++;
+      byTransp[tid].frete += Number(c.valorFrete||0);
+      byTransp[tid].kg   += Number(c.pesoLiq||0);
+    });
+    const transpRows = Object.entries(byTransp)
+      .sort((a,b)=>b[1].cargas-a[1].cargas)
+      .map(([,t])=>{
+        const rpkg = t.kg>0 ? 'R$ '+(t.frete/t.kg).toFixed(4)+'/kg' : '—';
+        const pct  = cComFrete.length>0 ? (t.cargas/cComFrete.length*100).toFixed(0)+'%' : '—';
+        return `<div class="row"><span class="row-k">${t.nome}</span><span class="row-v" style="font-size:12px;">${t.cargas} embarques · ${fmtKg(t.kg)} · ${fmtMoeda(t.frete)} · ${rpkg} · ${pct}</span></div>`;
+      }).join('');
 
-  // Por Região
-  const byRegiao = {};
-  nfes.forEach(n=>{ const r=n.regiao||'—'; if(!byRegiao[r]) byRegiao[r]={kg:0,count:0}; byRegiao[r].kg+=Number(n.pesoLiq||0); byRegiao[r].count++; });
+    // ── Por UF
+    const byUF = {};
+    nfes.forEach(n=>{ const uf=n.uf||'—'; if(!byUF[uf]) byUF[uf]={kg:0,fat:0,count:0}; byUF[uf].kg+=Number(n.pesoLiq||0); byUF[uf].fat+=Number(n.valorNFe||0); byUF[uf].count++; });
+    const ufRows = Object.entries(byUF)
+      .sort((a,b)=>b[1].kg-a[1].kg).slice(0,10)
+      .map(([uf,u])=>{
+        const pct  = totalKg>0 ? (u.kg/totalKg*100).toFixed(1)+'%' : '—';
+        const rpkg = u.kg>0 && totalFrete>0 ? 'R$ '+(totalFrete*(u.kg/totalKg)/u.kg).toFixed(4)+'/kg' : '—';
+        return `<div class="row"><span class="row-k">${uf}</span><span class="row-v" style="font-size:12px;">${fmtKg(u.kg)} · ${pct} · ${rpkg} · ${u.count} notas</span></div>`;
+      }).join('');
 
-  const pesqs = pesqSnap.docs.map(d=>d.data());
-  const mediaScore = pesqs.length>0 ? (pesqs.reduce((a,b)=>a+(Number(b.notaGeral)||0),0)/pesqs.length).toFixed(1) : '—';
+    // ── Por Região
+    const byReg = {};
+    nfes.forEach(n=>{ const r=n.regiao||'—'; if(!byReg[r]) byReg[r]={kg:0,count:0}; byReg[r].kg+=Number(n.pesoLiq||0); byReg[r].count++; });
+    const regRows = Object.entries(byReg)
+      .sort((a,b)=>b[1].kg-a[1].kg)
+      .map(([reg,r])=>{
+        const pct = totalKg>0 ? (r.kg/totalKg*100).toFixed(1)+'%' : '—';
+        return `<div class="row"><span class="row-k">${reg}</span><span class="row-v" style="font-size:12px;">${fmtKg(r.kg)} · ${pct} · ${r.count} notas</span></div>`;
+      }).join('');
 
-  // Transpórtadoras table
-  const transpRows = Object.entries(byTransp).sort((a,b)=>b[1].carregamentos-a[1].carregamentos).map(([tid,t])=>{
-    const media = t.kg>0 ? (t.frete/t.kg).toFixed(2) : '—';
-    const pct = cargas.filter(c=>c.status!=='provisoria').length>0 ? (t.carregamentos/cargas.filter(c=>c.status!=='provisoria').length*100).toFixed(0) : 0;
-    return `<div class="row"><span class="row-k">${t.nome}</span><span class="row-v" style="text-align:right;font-size:12px;">${t.carregamentos} car. · ${(t.kg/1000).toFixed(1)}t · ${fmtMoeda(t.frete)} · R$${media}/kg · ${pct}%</span></div>`;
-  }).join('');
+    // ── Por Motorista (top 5)
+    const byMot = {};
+    const motMap = {};
+    mots.forEach(m=>{ motMap[m.id] = m.nome||'—'; });
+    cComFrete.forEach(c=>{
+      const mid = c.motoristaId||'__sem';
+      if (!byMot[mid]) byMot[mid] = { nome: motMap[mid]||'Não informado', cargas:0, kg:0 };
+      byMot[mid].cargas++;
+      byMot[mid].kg += Number(c.pesoLiq||0);
+    });
+    const motRows = Object.entries(byMot)
+      .sort((a,b)=>b[1].cargas-a[1].cargas).slice(0,5)
+      .map(([,m])=>`<div class="row"><span class="row-k">${m.nome}</span><span class="row-v" style="font-size:12px;">${m.cargas} embarques · ${fmtKg(m.kg)}</span></div>`)
+      .join('');
 
-  // UF table
-  const ufRows = Object.entries(byUF).sort((a,b)=>b[1].kg-a[1].kg).slice(0,10).map(([uf,u])=>{
-    const media = u.kg>0 ? (totalFrete>0?(totalFrete*(u.kg/totalKg)/u.kg).toFixed(2):'—') : '—';
-    const pct = totalKg>0?(u.kg/totalKg*100).toFixed(1):0;
-    return `<div class="row"><span class="row-k">${uf}</span><span class="row-v" style="text-align:right;font-size:12px;">${(u.kg).toLocaleString('pt-BR')} kg · ${pct}% · R$${media}/kg</span></div>`;
-  }).join('');
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth();
+    const anoAtual = hoje.getFullYear();
+    const cMes = cComFrete.filter(c=>{ if(!c.criadoEm) return false; const d = c.criadoEm.toDate ? c.criadoEm.toDate() : new Date(c.criadoEm._ts||0); return d.getMonth()===mesAtual && d.getFullYear()===anoAtual; });
+    const kgMes = cMes.reduce((s,c)=>s+Number(c.pesoLiq||0),0);
+    const freteMes = cMes.reduce((s,c)=>s+Number(c.valorFrete||0),0);
 
-  // Região table
-  const regRows = Object.entries(byRegiao).sort((a,b)=>b[1].kg-a[1].kg).map(([reg,r])=>{
-    const pct = totalKg>0?(r.kg/totalKg*100).toFixed(1):0;
-    const media = r.kg>0 && totalFrete>0 ? (totalFrete*(r.kg/totalKg)/r.kg).toFixed(2) : '—';
-    return `<div class="row"><span class="row-k">${reg}</span><span class="row-v" style="text-align:right;font-size:12px;">${(r.kg).toLocaleString('pt-BR')} kg · ${pct}% · R$${media}/kg</span></div>`;
-  }).join('');
-
-  $('dashContent').innerHTML = `
+    $('dashContent').innerHTML = `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 0 4px;">
+      <button class="btn-sm btn-wa" onclick="waRelatorioExec()">📱 WA Relatório</button>
+      <button class="btn-sm btn-blue" onclick="window.print()">🖨️ Imprimir</button>
+      <button class="btn-sm btn-green" onclick="exportarTudo()">📥 Exportar tudo (CSV)</button>
+      <button class="btn-sm btn-purple" onclick="exportarNFes()">📄 Exportar NFes</button>
+    </div>
     <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-v">${cargas.length}</div><div class="kpi-l">Total carregamentos</div></div>
-      <div class="kpi"><div class="kpi-v">${ativas}</div><div class="kpi-l">Cargas ativas</div></div>
-      <div class="kpi"><div class="kpi-v">${provs}</div><div class="kpi-l">Provisórias</div></div>
-      <div class="kpi"><div class="kpi-v">${concluidas}</div><div class="kpi-l">Concluídas</div></div>
-      <div class="kpi"><div class="kpi-v">${(totalKg/1000).toFixed(1)}t</div><div class="kpi-l">Kg transportado</div></div>
+      <div class="kpi"><div class="kpi-v">${cargas.length}</div><div class="kpi-l">Total embarques</div></div>
+      <div class="kpi"><div class="kpi-v">${cAtivas.length}</div><div class="kpi-l">Cargas ativas</div></div>
+      <div class="kpi"><div class="kpi-v">${cProvs.length}</div><div class="kpi-l">Provisórias</div></div>
+      <div class="kpi"><div class="kpi-v">${cConcluidas.length}</div><div class="kpi-l">Concluídas</div></div>
+      <div class="kpi"><div class="kpi-v">${fmtKg(totalKg)}</div><div class="kpi-l">Kg transportado</div></div>
       <div class="kpi"><div class="kpi-v">${fmtMoeda(totalFrete)}</div><div class="kpi-l">Total fretes</div></div>
-      <div class="kpi"><div class="kpi-v">R$ ${custoKg}</div><div class="kpi-l">Média R$/kg</div></div>
-      <div class="kpi"><div class="kpi-v">${impactoLogistico}%</div><div class="kpi-l">Impacto logístico</div></div>
-      <div class="kpi"><div class="kpi-v">${fmtMoeda(totalFaturamento)}</div><div class="kpi-l">Faturamento (NFs)</div></div>
+      <div class="kpi"><div class="kpi-v">R$ ${custoKg}/kg</div><div class="kpi-l">R$/kg médio</div></div>
+      <div class="kpi"><div class="kpi-v">${impacto}%</div><div class="kpi-l">Impacto logístico</div></div>
+      <div class="kpi"><div class="kpi-v">${fmtMoeda(totalFaturamento)}</div><div class="kpi-l">Faturamento NFs</div></div>
       <div class="kpi"><div class="kpi-v">★ ${mediaScore}</div><div class="kpi-l">Satisfação média</div></div>
       <div class="kpi"><div class="kpi-v">${motAtivos.length}</div><div class="kpi-l">Motoristas ativos</div></div>
-      <div class="kpi"><div class="kpi-v">${cteSnap.size}</div><div class="kpi-l">CTEs pendentes</div></div>
+      <div class="kpi"><div class="kpi-v">${cMes.length}</div><div class="kpi-l">Embarques este mês</div></div>
     </div>
-    <div class="sec">
-      <div class="sec-t">Por Transportadora</div>
-      ${transpRows||'<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nenhum dado.</div>'}
-    </div>
-    <div class="sec">
-      <div class="sec-t">Por UF (Top 10)</div>
-      ${ufRows||'<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nenhum dado.</div>'}
-    </div>
-    <div class="sec">
-      <div class="sec-t">Por Região</div>
-      ${regRows||'<div style="color:var(--muted);font-size:13px;padding:8px 0;">Nenhum dado.</div>'}
-    </div>
-    <div class="sec">
-      <div class="sec-t">Ações</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn-sm btn-wa" onclick="waRelatorioExec()">📱 WA Relatório</button>
-        <button class="btn-sm btn-blue" onclick="window.print()">🖨️ Imprimir</button>
-        <button class="btn-sm btn-green" onclick="exportarTudo()">📥 Exportar tudo (CSV)</button>
-        <button class="btn-sm btn-purple" onclick="exportarNFes()">📄 Exportar NFes</button>
+    <div class="sec" style="margin-top:8px;padding:10px 14px;background:rgba(59,130,246,.06);border-radius:10px;border:1px solid rgba(59,130,246,.15);">
+      <div class="sec-t" style="font-size:11px;color:var(--p2);margin-bottom:6px;">MÊS ATUAL</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px;">
+        <span><strong>${cMes.length}</strong> embarques</span>
+        <span><strong>${fmtKg(kgMes)}</strong></span>
+        <span><strong>${fmtMoeda(freteMes)}</strong> em fretes</span>
+        <span><strong>${kgMes>0?'R$ '+(freteMes/kgMes).toFixed(4)+'/kg':'—'}</strong></span>
       </div>
-    </div>`;
-}
-
-// ─── USUÁRIOS ────────────────────────────────────────────
-async function loadUsuarios() {
-  $('usuariosList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
-  const snap = await getDocs(collection(db,'usuarios'));
-  const users = snap.docs.map(d=>({id:d.id,...d.data()}))
-    .sort((a,b) => (b.criadoEm && b.criadoEm._ts ? new Date(b.criadoEm._ts) : 0) - (a.criadoEm && a.criadoEm._ts ? new Date(a.criadoEm._ts) : 0));
-  const pendentes = users.filter(u=>u.status==='pendente_aprovacao');
-  const ativos = users.filter(u=>u.status==='aprovado'||u.status==='ativo');
-  const isGestor = currentUser.perfil==='gestor';
-  let html = '';
-  if (pendentes.length>0 && isGestor) {
-    html += `<div class="alert alert-a">👥 ${pendentes.length} solicitação(ões) aguardando aprovação</div>`;
-    html += pendentes.map(u=>`
-      <div class="li">
-        <div class="av" style="background:${avatarColor(u.nome)};color:#fff;">${initials(u.nome||u.email)}</div>
-        <div class="li-body">
-          <div class="li-title">${u.nome||u.email}</div>
-          <div class="li-sub">${u.email} · ${u.perfil||'—'} · ${u.cargo||'—'}</div>
-        </div>
-        <div class="li-right" style="gap:6px;">
-          <button class="btn-sm btn-green" onclick="aprovarUser('${u.id}')">✓ Aprovar</button>
-          <button class="btn-sm btn-red" onclick="rejeitarUser('${u.id}')">Rejeitar</button>
-        </div>
-      </div>`).join('');
+    </div>
+    <div class="sec"><div class="sec-t">Por Transportadora</div>${transpRows||'<div style="color:var(--muted);padding:8px 0;">Nenhum dado.</div>'}</div>
+    <div class="sec"><div class="sec-t">Por UF (Top 10)</div>${ufRows||'<div style="color:var(--muted);padding:8px 0;">Nenhum dado.</div>'}</div>
+    <div class="sec"><div class="sec-t">Por Região</div>${regRows||'<div style="color:var(--muted);padding:8px 0;">Nenhum dado.</div>'}</div>
+    <div class="sec"><div class="sec-t">Top 5 Motoristas</div>${motRows||'<div style="color:var(--muted);padding:8px 0;">Nenhum dado.</div>'}</div>
+    `;
+  } catch(e) {
+    $('dashContent').innerHTML = '<div style="padding:20px;color:var(--red);">Erro ao carregar dashboard: ' + e.message + '</div>';
   }
-  html += `<div style="padding:10px 16px 4px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Usuários ativos (${ativos.length + (currentUser.perfil==='gestor'?1:0)})</div>`;
-  // Sempre mostrar o usuário gestor atual primeiro
-  html += `<div class="li">
-    <div class="av" style="background:${avatarColor(currentUser.nome)};color:#fff;">${initials(currentUser.nome)}</div>
-    <div class="li-body"><div class="li-title">${currentUser.nome||'—'} (você)</div><div class="li-sub">${currentUser.email} · ${currentUser.cargo||'—'}</div></div>
-    <div class="li-right"><span class="pill pb">Gestor</span></div>
-  </div>`;
-  html += ativos.filter(u=>u.id!==currentUser.id).map(u=>`
-    <div class="li">
-      <div class="av" style="background:${avatarColor(u.nome)};color:#fff;">${initials(u.nome||u.email)}</div>
-      <div class="li-body">
-        <div class="li-title">${u.nome||u.email}</div>
-        <div class="li-sub">${u.email} · ${u.cargo||'—'}</div>
-      </div>
-      <div class="li-right">
-        <span class="pill ${u.perfil==='gestor'?'pb':u.perfil==='operacional'?'pg':'pz'}">${u.perfil||'—'}</span>
-        ${isGestor ? `<button class="btn-sm btn-red" onclick="revogarUser('${u.id}')" style="font-size:10px;padding:3px 8px;">Revogar</button>` : ''}
-      </div>
-    </div>`).join('');
-  if (isGestor) {
-    html += `<div style="padding:14px 16px 6px;">
-      <button class="btn btn-wa" onclick="openModal('modalConvidarUser')">📱 Convidar via WhatsApp</button>
-    </div>`;
-  }
-  $('usuariosList').innerHTML = html;
 }
-
-window.aprovarUser = async function(id) {
-  await updateDoc(doc(db,'usuarios',id), { status:'aprovado', aprovadoEm: serverTimestamp(), aprovadoPor: currentUser.id });
-  loadUsuarios();
-  loadHome();
-};
-
-window.rejeitarUser = async function(id) {
-  if (!confirm('Rejeitar este usuário?')) return;
-  await updateDoc(doc(db,'usuarios',id), { status:'rejeitado' });
-  loadUsuarios();
-};
-
-window.revogarUser = async function(id) {
-  if (!confirm('Revogar acesso deste usuário?')) return;
-  await updateDoc(doc(db,'usuarios',id), { status:'rejeitado' });
-  loadUsuarios();
-};
-
-// ─── WHATSAPP HELPERS ────────────────────────────────────
-function waOpen(msg) {
-  window.open('https://wa.me/?text='+encodeURIComponent(msg));
-}
-
-window.waBemVindo = async function(cargaId) {
-  const d = await getDoc(doc(db,'cargas',cargaId));
-  const c = d.data();
-  var _mnSnap = c.motoristaId ? (await getDoc(doc(db,'motoristas',c.motoristaId))).data() : null; let motNome = _mnSnap ? (_mnSnap.nome || '—') : '—';
-  var _tdSnap = c.transportadoraId ? (await getDoc(doc(db,'transportadoras',c.transportadoraId))).data() : null; let transpNome = _tdSnap ? (_tdSnap.apelido || '—') : '—';
-  const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
-  const cls = clSnap.docs.map(d=>d.data());
-  const entregas = cls.map((cl,i)=>`${i+1}. ${cl.nome} — ${cl.cidade||'—'}`).join('\n');
-  const msg = `Olá, ${motNome}! Tudo bem?\n\nSou Diego Chaves, Gerente de Logística da *Maris Pescados*. Vou acompanhar pessoalmente o seu carregamento.\n\n📋 *Embarque ${c.embarque}*\n🗺️ Rota: ${c.rota||'—'}\n🚛 Transportadora: ${transpNome}\n📦 ${(c.tipoCarga ? c.tipoCarga.toUpperCase() : '—')} · ${fmtKg(c.pesoLiq)}\n🌡️ Temperatura: -18°C\n📅 Saída: ${fmtData(c.dataSaida)}\n\n*Entregas:*\n${entregas}\n\nBom trabalho e boa viagem! 🤝\n_DYA Soluções — Maris Pescados_`;
-  waOpen(msg);
-};
-
-window.waRomaneio = async function(cargaId) {
-  const d = await getDoc(doc(db,'cargas',cargaId));
-  const c = d.data();
-  const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
-  const cls = clSnap.docs.map(d=>d.data());
-  const linhas = cls.map((cl,i)=>`${i+1}. *${cl.nome}* — ${cl.cidade||'—'}\n   📦 ${fmtKg(cl.pesoLiq)} | 💰 ${fmtMoeda(cl.valorNF)}\n   📅 Prev: ${fmtData(cl.previsao)}${cl.agendNum?'\n   📋 Agend: '+cl.agendNum:''}`).join('\n\n');
-  const msg = `📋 *ROMANEIO — ${c.embarque}*\n🗺️ ${c.rota||'—'} · ${(c.tipoCarga ? c.tipoCarga.toUpperCase() : '—')}\n📦 ${fmtKg(c.pesoLiq)} | 💰 ${fmtMoeda(c.valorFrete)}\n\n${linhas}\n\n_DYA Soluções · Maris Pescados_`;
-  waOpen(msg);
-};
-
-window.waCliente = async function(cargaId, clienteId) {
-  const d = await getDoc(doc(db,'cargas',cargaId,'clientes',clienteId));
-  const cl = d.data();
-  const cargaDoc = await getDoc(doc(db,'cargas',cargaId));
-  const c = cargaDoc.data();
-  const msg = `📦 *Atualização de Entrega — Maris Pescados*\n\nOlá! Seguem as informações da sua entrega:\n\n*Embarque:* ${c.embarque}\n*Rota:* ${c.rota||'—'}\n*Destino:* ${cl.cidade||'—'}\n*Previsão:* ${fmtData(cl.previsao)}\n*Status:* ${cl.status||'Em trânsito'}\n\n_DYA Soluções · Maris Pescados_`;
-  waOpen(msg);
-};
-
-window.waCobrarCte = function(cteId, clienteNome) {
-  const msg = `Olá! Segue cobrança referente ao CTE do cliente *${clienteNome}*.\n\nO documento ainda não foi emitido. Solicitamos a emissão com urgência para regularização do processo.\n\n_DYA Soluções · Maris Pescados_`;
-  waOpen(msg);
-};
-
-window.waPesquisa = function(cargaId, nome) {
-  const msg = `Olá! Gostaríamos de saber como foi sua experiência com a entrega da *Maris Pescados*.\n\nPor favor, avalie de 1 a 5 os itens:\n1️⃣ Nota geral\n2️⃣ Prazo / Pontualidade\n3️⃣ Atendimento\n4️⃣ Comunicação\n\nSua opinião é muito importante para nós! 🙏\n_DYA Soluções · Maris Pescados_`;
-  waOpen(msg);
-};
 
 window.waRelatorioExec = async function() {
   const cargasSnap = await getDocs(collection(db,'cargas'));
