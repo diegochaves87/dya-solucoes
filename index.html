@@ -1833,8 +1833,12 @@ window.gerarRomaneio = async function(cargaId) {
   }).join('');
 
   const obsRows = grupos.map(g => {
-    const end = g.localEndereco || (g.localCidade ? g.localCidade+'/'+g.localUF : 'O MESMO ENDEREÇO DA NFe');
-    return '<tr><td style="text-align:center;font-weight:700;">ENTREGA ' + g.posNum + '</td><td style="font-weight:600;">' + g.localNome + '</td><td>' + end + '</td></tr>';
+    const endCompleto = g.localEndereco
+      ? (g.localEndereco + (g.localCidade ? ', ' + g.localCidade + '/' + g.localUF : ''))
+      : (g.localCidade ? g.localCidade + '/' + g.localUF : 'O MESMO ENDEREÇO DA NFe');
+    const mapsQuery = encodeURIComponent(g.localEndereco ? g.localEndereco + ' ' + g.localCidade + ' ' + g.localUF : g.localNome + ' ' + g.localCidade + ' ' + g.localUF);
+    const mapsLink = (g.localEndereco || g.localCidade) ? '<br><a href="https://www.google.com/maps/search/?api=1&query=' + mapsQuery + '" target="_blank" style="font-size:10px;color:#3b82f6;">📍 Ver no Google Maps</a>' : '';
+    return '<tr><td style="text-align:center;font-weight:700;">ENTREGA ' + g.posNum + '</td><td style="font-weight:600;">' + g.localNome + '</td><td>' + endCompleto + mapsLink + '</td></tr>';
   }).join('');
 
   // Montar HTML via concatenacao segura
@@ -1863,9 +1867,9 @@ window.gerarRomaneio = async function(cargaId) {
     + '<table><thead><tr><th>Pos.</th><th>Cliente</th><th>Local de Entrega</th><th>Notas</th><th>Volume (kg)</th><th>Local Embarque</th><th>R$/kg</th><th>Sub-total</th></tr></thead>'
     + '<tbody>' + rowsEntrega + '</tbody>'
     + '<tr class="total-row"><td colspan="4">TOTAL</td><td>' + totalKg.toLocaleString('pt-BR') + ' kg</td><td></td><td></td><td>R$ ' + totalFrete.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</td></tr></table>'
-    + '<div class="section-title">Observações — Locais de Entrega</div>'
+    + '<div class="section-title obs">Observações — Locais de Entrega</div>'
     + '<table><thead><tr><th style="width:120px;">Entrega</th><th style="width:160px;">Local</th><th>Endereço Completo</th></tr></thead><tbody>' + obsRows + '</tbody></table>'
-    + '<div class="footer"><div class="sign"><div class="sign-line"></div><div class="sign-name">Diego Chaves</div><div class="sign-role">Gerente de Logística · DYA Soluções</div></div>'
+    + '<div class="footer"><div class="sign"><div class="sign-line"></div><div class="sign-name">Diego Chaves</div><div class="sign-role">Gerente de Logística · Maris Pescados</div></div>'
     + '<div style="text-align:right;"><img src="' + LOGO_MARIS + '" alt="Maris" style="height:32px;margin-bottom:4px;display:block;margin-left:auto;"><div style="font-size:10px;color:#9ca3af;">Maris Pescados · ' + new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) + '</div></div></div>';
   const docClose = '<\/body><\/html>';
 
@@ -2147,15 +2151,13 @@ window.abrirCarga = async function(id) {
   }
 
   // Total resumo
-  // Preço médio correto: usar NFes lançadas (dados reais)
+  // R$/kg = Valor do frete / Peso total líquido
   const nfesArr = nfesSnap.docs.map(d=>d.data());
   const totalKgNFes = nfesArr.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
-  const totalValorNFes = nfesArr.reduce((s,n)=>s+Number(n.valorNFe||0),0);
-  // Se há NFes lançadas, usar elas; senão usar estimativas dos clientes
   const totalKgBase = totalKgNFes>0 ? totalKgNFes : totalKgClientes;
-  const totalValorBase = totalValorNFes>0 ? totalValorNFes : clientes.reduce((s,cl)=>s+Number(cl.valorNF||cl.valorNFe||0),0);
-  const precoMedioGeral = totalKgBase>0 ? (totalValorBase/totalKgBase).toFixed(2) : '—';
-  // Atualizar peso líquido exibido com dados das NFes se disponível
+  const valorFreteTotal = Number(c.valorFrete||0);
+  const precoMedioGeral = totalKgBase>0 ? (valorFreteTotal/totalKgBase).toFixed(4) : '—';
+  // Peso líquido exibido
   const pesoExibir = totalKgNFes>0 ? totalKgNFes : totalKgClientes;
 
   $('cargaDetContent').innerHTML = `
