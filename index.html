@@ -1718,6 +1718,15 @@ window.abrirCarga = async function(id) {
     }).join('');
   }
 
+  // Calcular R$/kg e peso para exibição
+  const nfesArr = nfesSnap.docs.map(d=>d.data());
+  const totalKgNFes = nfesArr.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
+  const pesoTotal = Number(c.pesoLiq||0) > 0 ? Number(c.pesoLiq)
+                  : totalKgNFes > 0 ? totalKgNFes
+                  : totalKgClientes;
+  const precoMedioGeral = pesoTotal > 0 ? (Number(c.valorFrete||0)/pesoTotal).toFixed(4) : '—';
+  const pesoExibir = pesoTotal;
+
   $('cargaDetContent').innerHTML = `
     ${provBanner}
     <div class="det-hdr">
@@ -2352,6 +2361,15 @@ window.abrirCarga = async function(id) {
       </div>`;
     }).join('');
   }
+
+  // Calcular R$/kg e peso para exibição
+  const nfesArrCalc = nfesSnap.docs.map(d=>d.data());
+  const totalKgNFesCalc = nfesArrCalc.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
+  const pesoTotal = Number(c.pesoLiq||0) > 0 ? Number(c.pesoLiq)
+                  : totalKgNFesCalc > 0 ? totalKgNFesCalc
+                  : totalKgClientes;
+  const precoMedioGeral = pesoTotal > 0 ? (Number(c.valorFrete||0)/pesoTotal).toFixed(4) : '—';
+  const pesoExibir = pesoTotal;
 
   $('cargaDetContent').innerHTML = `
     ${provBanner}
