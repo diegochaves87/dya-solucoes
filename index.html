@@ -1867,7 +1867,7 @@ window.gerarRomaneio = async function(cargaId) {
     + '<table><thead><tr><th>Pos.</th><th>Cliente</th><th>Local de Entrega</th><th>Notas</th><th>Volume (kg)</th><th>Local Embarque</th><th>R$/kg</th><th>Sub-total</th></tr></thead>'
     + '<tbody>' + rowsEntrega + '</tbody>'
     + '<tr class="total-row"><td colspan="4">TOTAL</td><td>' + totalKg.toLocaleString('pt-BR') + ' kg</td><td></td><td></td><td>R$ ' + totalFrete.toLocaleString('pt-BR',{minimumFractionDigits:2}) + '</td></tr></table>'
-    + '<div class="section-title obs">Observações — Locais de Entrega</div>'
+    + '<div class="obs-section"><div class="section-title">Observações — Locais de Entrega</div></div>'
     + '<table><thead><tr><th style="width:120px;">Entrega</th><th style="width:160px;">Local</th><th>Endereço Completo</th></tr></thead><tbody>' + obsRows + '</tbody></table>'
     + '<div class="footer"><div class="sign"><div class="sign-line"></div><div class="sign-name">Diego Chaves</div><div class="sign-role">Gerente de Logística · Maris Pescados</div></div>'
     + '<div style="text-align:right;"><img src="' + LOGO_MARIS + '" alt="Maris" style="height:32px;margin-bottom:4px;display:block;margin-left:auto;"><div style="font-size:10px;color:#9ca3af;">Maris Pescados · ' + new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) + '</div></div></div>';
@@ -2152,13 +2152,13 @@ window.abrirCarga = async function(id) {
 
   // Total resumo
   // R$/kg = Valor do frete / Peso total líquido
+  // Usar peso das NFes se disponível, senão peso dos clientes
   const nfesArr = nfesSnap.docs.map(d=>d.data());
   const totalKgNFes = nfesArr.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
-  const totalKgBase = totalKgNFes>0 ? totalKgNFes : totalKgClientes;
-  const valorFreteTotal = Number(c.valorFrete||0);
-  const precoMedioGeral = totalKgBase>0 ? (valorFreteTotal/totalKgBase).toFixed(4) : '—';
-  // Peso líquido exibido
-  const pesoExibir = totalKgNFes>0 ? totalKgNFes : totalKgClientes;
+  // Se não há NFes ou peso das NFes é zero, usar peso dos clientes
+  const pesoTotal = totalKgNFes > 0 ? totalKgNFes : totalKgClientes;
+  const precoMedioGeral = pesoTotal > 0 ? (Number(c.valorFrete||0)/pesoTotal).toFixed(4) : '—';
+  const pesoExibir = pesoTotal;
 
   $('cargaDetContent').innerHTML = `
     ${provBanner}
