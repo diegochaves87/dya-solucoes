@@ -1013,6 +1013,67 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:var(--t
 </div>
 
 
+
+<!-- Modal: Cadastrar/Editar Cliente Base -->
+<div class="modal-bg" id="modalClienteBase">
+  <div class="modal">
+    <div class="modal-title" id="modalClienteBaseTitle">Cadastrar Cliente <button class="modal-close" onclick="closeModal('modalClienteBase')">×</button></div>
+    <div class="alert alert-b" style="margin:0 0 12px;font-size:12px;">Clientes cadastrados ficam disponíveis para busca ao lançar cargas.</div>
+    <div class="fld"><label>Razão Social *</label><input type="text" id="cbNome" placeholder="Nome completo da empresa"></div>
+    <div class="fld"><label>CNPJ</label><input type="text" id="cbCNPJ" placeholder="00.000.000/0001-00"></div>
+    <div class="fld"><label>Cidade</label><input type="text" id="cbCidade" placeholder="Ex: São Paulo"></div>
+    <div class="fld"><label>UF</label>
+      <select id="cbUF">
+        <option value="">Selecione...</option>
+        <option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option>
+        <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+        <option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option>
+        <option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
+        <option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option>
+        <option>SP</option><option>TO</option>
+      </select>
+    </div>
+    <div class="fld"><label>Região</label>
+      <select id="cbRegiao">
+        <option value="">Selecione...</option>
+        <option value="NORDESTE">Nordeste</option>
+        <option value="SUDESTE">Sudeste</option>
+        <option value="SUL">Sul</option>
+        <option value="CENTRO-OESTE">Centro-Oeste</option>
+        <option value="NORTE">Norte</option>
+      </select>
+    </div>
+    <div class="fld"><label>Telefone / Contato</label><input type="tel" id="cbTel" placeholder="(00) 99999-9999"></div>
+    <input type="hidden" id="cbId">
+    <button class="btn btn-grad" onclick="salvarClienteBase()">Salvar cliente</button>
+  </div>
+</div>
+
+<!-- Modal: Editar Local de Entrega -->
+<div class="modal-bg" id="modalEditarLocal">
+  <div class="modal">
+    <div class="modal-title">Editar Local de Entrega <button class="modal-close" onclick="closeModal('modalEditarLocal')">×</button></div>
+    <div class="fld"><label>Nome do local *</label><input type="text" id="elNome" placeholder="Ex: Filial SP, CD Carrefour Itapevi"></div>
+    <div class="fld"><label>Endereço completo</label><input type="text" id="elEndereco" placeholder="Rua, número, bairro"></div>
+    <div class="fld"><label>Cidade</label><input type="text" id="elCidade"></div>
+    <div class="fld"><label>UF</label>
+      <select id="elUF">
+        <option value="">Selecione...</option>
+        <option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option>
+        <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+        <option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option>
+        <option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
+        <option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option>
+        <option>SP</option><option>TO</option>
+      </select>
+    </div>
+    <div class="fld"><label>Contato / Responsável</label><input type="text" id="elContato" placeholder="Nome e telefone"></div>
+    <input type="hidden" id="elId">
+    <button class="btn btn-grad" onclick="salvarEdicaoLocal()" style="margin-bottom:8px;">Salvar alterações</button>
+    <button class="btn btn-red" onclick="excluirLocal()" style="font-size:12px;">Excluir local</button>
+  </div>
+</div>
+
 <script>
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1850,7 +1911,9 @@ window.gerarRomaneio = async function(cargaId) {
     const endCompleto = g.localEndereco
       ? (g.localEndereco + (g.localCidade ? ', ' + g.localCidade + '/' + g.localUF : ''))
       : (g.localCidade ? g.localCidade + '/' + g.localUF : 'O MESMO ENDEREÇO DA NFe');
-    return '<tr><td style="text-align:center;font-weight:700;">ENTREGA ' + g.posNum + '</td><td style="font-weight:600;">' + g.localNome + '</td><td>' + endCompleto + '</td></tr>';
+    const mapsAddr = g.localEndereco ? (g.localEndereco + ', ' + g.localCidade + ', ' + g.localUF) : '';
+    const mapsLink = mapsAddr ? ' <a href="https://maps.google.com/?q=' + encodeURIComponent(mapsAddr) + '" target="_blank" style="font-size:10px;color:#1a73e8;text-decoration:none;">📍 Ver no Maps</a>' : '';
+    return '<tr><td style="text-align:center;font-weight:700;">ENTREGA ' + g.posNum + '</td><td style="font-weight:600;">' + g.localNome + '</td><td>' + endCompleto + mapsLink + '</td></tr>';
   }).join('');
 
   // Montar HTML via concatenacao segura
@@ -3272,12 +3335,15 @@ window.abrirLocalEntrega = async function(clienteId, cargaId) {
       lista.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:12px;">Nenhum local cadastrado ainda. Cadastre abaixo.</div>';
     } else {
       lista.innerHTML = locais.map(l=>`
-        <div class="li" style="padding:10px 14px;cursor:pointer;" onclick="selecionarLocalEntrega('${l.id}','${(l.nome||'').replace(/'/g,"\'")}','${l.cidade||''}','${l.uf||''}')">
-          <div class="li-body">
+        <div class="li" style="padding:10px 14px;">
+          <div class="li-body" style="cursor:pointer;" onclick="selecionarLocalEntrega('${l.id}','${(l.nome||'').replace(/'/g,"\'")}','${l.cidade||''}','${l.uf||''}')">
             <div class="li-title" style="font-size:13px;">${l.nome}</div>
             <div class="li-sub">${l.cidade||'—'}/${l.uf||'—'} · ${l.endereco||''}</div>
           </div>
-          <div class="li-right"><span style="font-size:11px;color:var(--p2);">Selecionar →</span></div>
+          <div class="li-right" style="gap:6px;">
+            <span style="font-size:11px;color:var(--p2);cursor:pointer;" onclick="selecionarLocalEntrega('${l.id}','${(l.nome||'').replace(/'/g,"\'")}','${l.cidade||''}','${l.uf||''}')">Selecionar →</span>
+            <button class="btn-sm btn-blue" onclick="abrirEditarLocal('${l.id}')" style="font-size:10px;padding:2px 7px;">✏️</button>
+          </div>
         </div>`).join('');
     }
   } catch(e) { alert('Erro ao abrir locais: ' + e.message); }
@@ -3413,6 +3479,54 @@ window.salvarEdicaoNFe = async function() {
   await updateDoc(doc(db,'nfes',id), dados);
   closeModal('modalEditarNFe');
   abrirCarga(cargaId);
+};
+
+
+
+// ─── EDITAR LOCAL DE ENTREGA ─────────────────────────────────────────────
+window.abrirEditarLocal = async function(localId) {
+  try {
+    const d = await getDoc(doc(db,'locais_entrega',localId));
+    if (!d.exists()) { alert('Local não encontrado.'); return; }
+    const l = d.data();
+    $('elId').value = localId;
+    $('elNome').value = l.nome||'';
+    $('elEndereco').value = l.endereco||'';
+    $('elCidade').value = l.cidade||'';
+    $('elUF').value = l.uf||'';
+    $('elContato').value = l.contato||'';
+    openModal('modalEditarLocal');
+  } catch(e) { alert('Erro: ' + e.message); }
+};
+
+window.salvarEdicaoLocal = async function() {
+  const id = $('elId').value;
+  if (!id) return;
+  const nome = $('elNome').value.trim();
+  if (!nome) { alert('Informe o nome do local.'); return; }
+  await updateDoc(doc(db,'locais_entrega',id), {
+    nome,
+    endereco: $('elEndereco').value.trim(),
+    cidade: $('elCidade').value.trim(),
+    uf: $('elUF').value,
+    contato: $('elContato').value.trim()
+  });
+  closeModal('modalEditarLocal');
+  // Reabrir modal de local de entrega se ainda estiver na carga
+  if ($('leClienteId') && $('leClienteId').value) {
+    abrirLocalEntrega($('leClienteId').value, $('leCargaId').value);
+  }
+};
+
+window.excluirLocal = async function() {
+  const id = $('elId').value;
+  if (!id) return;
+  if (!confirm('Excluir este local de entrega?')) return;
+  await deleteDoc(doc(db,'locais_entrega',id));
+  closeModal('modalEditarLocal');
+  if ($('leClienteId') && $('leClienteId').value) {
+    abrirLocalEntrega($('leClienteId').value, $('leCargaId').value);
+  }
 };
 
 
