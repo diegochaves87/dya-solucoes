@@ -2371,7 +2371,7 @@ window.abrirCarga = async function(id) {
           ${!isEntregue && !isProv ? `<button class="btn-sm btn-green" onclick="marcarLocalEntregue('${id}','${lKey}')">✓ Entregue</button>` : ''}
           ${!isEntregue && !isProv ? `<button class="btn-sm btn-red" onclick="abrirSinistroLocal('${id}','${lKey}')">⚠️ Sinistro</button>` : ''}
           ${!loc.isNF ? `<button class="btn-sm btn-blue" onclick="abrirEditarLocal('${loc.id}')">✏️ Editar local</button>` : ''}
-          ${!isProv ? `<button class="btn-sm btn-amber" onclick="abrirLocalEntregaParaPasta('${lKey}','${id}')">📍 Trocar local</button>` : ''}
+          <button class="btn-sm btn-amber" onclick="abrirLocalEntregaParaPasta('${lKey}','${id}')">📍 Trocar local</button>
         </div>` : '';
 
       return `<div class="local-pasta"
@@ -3948,7 +3948,7 @@ function ocultarFeedback() {
 
 // Marcar entregue todos os clientes de um local
 window.marcarLocalEntregue = async function(cargaId, localKey) {
-  if (!confirm('Marcar todos as notas deste local como entregues?')) return;
+  if (!confirm('Marcar todas as notas deste local como entregues?')) return;
   const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
   const clientes = clSnap.docs.map(d=>({id:d.id,...d.data()}));
   const doLocal = clientes.filter(cl => {
@@ -3959,6 +3959,18 @@ window.marcarLocalEntregue = async function(cargaId, localKey) {
     await updateDoc(doc(db,'cargas',cargaId,'clientes',cl.id), {
       status:'entregue', entregueEm: serverTimestamp()
     });
+  }
+  // Verificar se TODOS os clientes da carga estão entregues → marcar carga como concluída
+  const todosSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
+  const todos = todosSnap.docs.map(d=>d.data());
+  const todosEntregues = todos.length > 0 && todos.every(cl=>cl.status==='entregue');
+  if (todosEntregues) {
+    if (confirm('Todas as entregas concluídas! Marcar carga como CONCLUÍDA?')) {
+      await updateDoc(doc(db,'cargas',cargaId), {
+        status: 'concluida',
+        concluidaEm: serverTimestamp()
+      });
+    }
   }
   abrirCarga(cargaId);
 };
