@@ -1107,6 +1107,41 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:var(--t
   </div>
 </div>
 
+
+<!-- Modal: Criar/Selecionar Local de Entrega na Carga -->
+<div class="modal-bg" id="modalCriarLocal">
+  <div class="modal">
+    <div class="modal-title">📍 Locais de Entrega <button class="modal-close" onclick="closeModal('modalCriarLocal')">×</button></div>
+    <div class="alert alert-b" style="margin:0 0 12px;font-size:12px;">
+      Selecione um local existente ou cadastre um novo. Após criar, arraste as notas para a pasta do local.
+    </div>
+
+    <!-- Lista de locais existentes -->
+    <div id="criarLocalLista" style="max-height:200px;overflow-y:auto;margin-bottom:14px;border:1px solid var(--border);border-radius:10px;"></div>
+
+    <!-- Formulário de novo local -->
+    <div style="font-size:11px;font-weight:700;color:var(--p2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">+ Novo local</div>
+    <div class="fld"><label>Nome do local *</label><input type="text" id="clNomeLocal" placeholder="Ex: FILIAL SP, CD CARREFOUR ITAPEVI, VELOX-DF"></div>
+    <div class="fld"><label>Endereço completo</label><input type="text" id="clEndLocal" placeholder="Rua, número, bairro"></div>
+    <div class="fld" style="display:grid;grid-template-columns:1fr 80px;gap:8px;">
+      <div><label>Cidade</label><input type="text" id="clCidLocal" placeholder="Cidade"></div>
+      <div><label>UF</label>
+        <select id="clUFLocal" style="width:100%;">
+          <option value="">UF</option>
+          <option>AC</option><option>AL</option><option>AM</option><option>AP</option><option>BA</option>
+          <option>CE</option><option>DF</option><option>ES</option><option>GO</option><option>MA</option>
+          <option>MG</option><option>MS</option><option>MT</option><option>PA</option><option>PB</option>
+          <option>PE</option><option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
+          <option>RO</option><option>RR</option><option>RS</option><option>SC</option><option>SE</option>
+          <option>SP</option><option>TO</option>
+        </select>
+      </div>
+    </div>
+    <div class="fld"><label>Contato / Responsável</label><input type="text" id="clContatoLocal" placeholder="Nome e telefone do responsável"></div>
+    <input type="hidden" id="clCargaIdLocal">
+    <button class="btn btn-grad" onclick="salvarCriarLocal()">Criar local e adicionar à carga</button>
+  </div>
+</div>
 <script>
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1749,6 +1784,7 @@ window.abrirCarga = async function(id) {
       <div class="sec-t" style="display:flex;justify-content:space-between;align-items:center;">
         Clientes (${clientes.length})
         ${isOp ? `<button class="btn-sm btn-purple" onclick="abrirNovoCliente('${id}')">+ Cliente</button>` : ''}
+        ${isOp ? `<button class="btn-sm btn-blue" onclick="abrirCriarLocal('${id}')">📍 + Local de Entrega</button>` : ''}
         ${isOp && clientes.length > 1 ? `<button class="btn-sm btn-amber" onclick="abrirUnificar('${id}')">🔗 Unificar</button>` : ''}
       </div>
       ${clientesHTML}
@@ -3594,6 +3630,121 @@ window.salvarEdicaoNFe = async function() {
   abrirCarga(cargaId);
 };
 
+
+
+
+// ─── CRIAR LOCAL DE ENTREGA NA CARGA ─────────────────────────────────────
+window.abrirCriarLocal = async function(cargaId) {
+  $('clCargaIdLocal').value = cargaId;
+  ['clNomeLocal','clEndLocal','clCidLocal','clContatoLocal'].forEach(i=>$(i) && ($(i).value=''));
+  if ($('clUFLocal')) $('clUFLocal').value = '';
+
+  // Carregar locais existentes
+  const lista = $('criarLocalLista');
+  lista.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  openModal('modalCriarLocal');
+
+  try {
+    const snap = await getDocs(collection(db,'locais_entrega'));
+    const locais = snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+
+    if (locais.length === 0) {
+      lista.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:12px;text-align:center;">Nenhum local cadastrado ainda. Crie um abaixo.</div>';
+    } else {
+      lista.innerHTML = locais.map(l=>`
+        <div class="li" style="padding:10px 14px;cursor:pointer;" onclick="usarLocalExistente('${l.id}','${cargaId}')">
+          <div class="li-body">
+            <div class="li-title" style="font-size:13px;">${l.nome}</div>
+            <div class="li-sub">${l.endereco?l.endereco+' · ':''} ${l.cidade||'—'}/${l.uf||'—'}</div>
+          </div>
+          <div class="li-right" style="gap:6px;">
+            <span style="font-size:11px;color:var(--p2);">Usar →</span>
+            <button class="btn-sm btn-blue" onclick="event.stopPropagation();abrirEditarLocal('${l.id}')" style="font-size:10px;padding:2px 6px;">✏️</button>
+          </div>
+        </div>`).join('');
+    }
+  } catch(e) {
+    lista.innerHTML = '<div style="padding:12px;color:var(--muted);">Erro ao carregar locais.</div>';
+  }
+};
+
+// Usar local existente — cria uma pasta vazia na carga (cliente placeholder)
+// Na prática apenas fecha o modal e instrui o usuário a arrastar as notas
+window.usarLocalExistente = async function(localId, cargaId) {
+  // Buscar dados do local
+  try {
+    const ld = await getDoc(doc(db,'locais_entrega',localId));
+    if (!ld.exists()) return;
+    const l = ld.data();
+    closeModal('modalCriarLocal');
+    // Mostrar instrução
+    mostrarFeedback('📍 Local "' + l.nome + '" pronto. Arraste as notas para a pasta.');
+    // Recarregar a carga para mostrar instrução visual
+    // A pasta só aparece quando um cliente for atribuído a este local
+    // Então vamos pré-atribuir TODOS os clientes sem local a este local? Não.
+    // Melhor: abrir o modal de seleção de local para o primeiro cliente sem local
+    const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
+    const semLocal = clSnap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>!c.localEntregaId);
+    if (semLocal.length > 0) {
+      // Perguntar se quer atribuir todos ao local
+      if (confirm('Atribuir todos os clientes sem local definido a "' + l.nome + '"?')) {
+        for (const cl of semLocal) {
+          await updateDoc(doc(db,'cargas',cargaId,'clientes',cl.id), {
+            localEntregaId: localId,
+            localEntregaNome: l.nome,
+            localEntregaCidade: l.cidade||'',
+            localEntregaUF: l.uf||'',
+            localEntregaEndereco: l.endereco||''
+          });
+        }
+      }
+    }
+    abrirCarga(cargaId);
+  } catch(e) { alert('Erro: ' + e.message); }
+};
+
+// Criar novo local e adicionar à base
+window.salvarCriarLocal = async function() {
+  const nome = $('clNomeLocal').value.trim();
+  if (!nome) { alert('Informe o nome do local.'); return; }
+  const cargaId = $('clCargaIdLocal').value;
+
+  const dados = {
+    nome,
+    endereco: $('clEndLocal').value.trim(),
+    cidade: $('clCidLocal').value.trim(),
+    uf: $('clUFLocal').value,
+    contato: $('clContatoLocal').value.trim(),
+    criadoEm: serverTimestamp()
+  };
+
+  // Salvar na base de locais
+  const ref = await addDoc(collection(db,'locais_entrega'), dados);
+  closeModal('modalCriarLocal');
+
+  // Perguntar se quer atribuir todos os clientes sem local
+  const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
+  const semLocal = clSnap.docs.map(d=>({id:d.id,...d.data()})).filter(c=>!c.localEntregaId);
+
+  if (semLocal.length > 0) {
+    if (confirm('Local "' + nome + '" criado! Atribuir todos os clientes sem local a este local?')) {
+      for (const cl of semLocal) {
+        await updateDoc(doc(db,'cargas',cargaId,'clientes',cl.id), {
+          localEntregaId: ref.id,
+          localEntregaNome: nome,
+          localEntregaCidade: dados.cidade,
+          localEntregaUF: dados.uf,
+          localEntregaEndereco: dados.endereco
+        });
+      }
+    }
+  } else {
+    mostrarFeedback('📍 Local "' + nome + '" criado! Arraste as notas para a pasta.');
+  }
+
+  abrirCarga(cargaId);
+};
 
 
 // ─── EDITAR LOCAL DE ENTREGA ─────────────────────────────────────────────
