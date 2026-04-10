@@ -2002,7 +2002,7 @@ window.gerarRomaneio = async function(cargaId) {
 
   // Montar HTML via concatenacao segura
   const docHeader = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><style>';
-  const css = '*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;padding:28px;color:#1a1a2e;font-size:12px;}.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid #0f3460;margin-bottom:16px;}.badge{background:linear-gradient(135deg,#6c3bfc,#3b82f6);color:white;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}.block{background:#f8f9ff;border:1px solid #e8eaf6;border-radius:8px;padding:10px;}.block-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;margin-bottom:6px;}.row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:.5px solid #f0f2f8;font-size:11px;}.row:last-child{border-bottom:none;}.rk{color:#9ca3af;}.rv{font-weight:600;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}th{background:#0f3460;color:white;padding:7px 8px;text-align:left;font-size:10px;font-weight:600;}td{padding:7px 8px;border-bottom:1px solid #f0f2f8;font-size:11px;vertical-align:top;}tr:nth-child(even) td{background:#f8f9ff;}.total-row td{background:#0f3460!important;color:white!important;font-weight:700;}.section-title{font-size:13px;font-weight:700;color:#0f3460;margin:14px 0 8px;padding-bottom:5px;border-bottom:2px solid #e8eaf6;}.footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px;padding-top:14px;border-top:1px solid #e8eaf6;}.sign{text-align:center;}.sign-line{width:180px;border-top:1px solid #1a1a2e;margin:0 auto 5px;}.sign-name{font-size:12px;font-weight:700;}.sign-role{font-size:11px;color:#9ca3af;}@media print{body{padding:16px;}}';
+  const css = '*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;padding:28px;color:#1a1a2e;font-size:12px;}.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid #0f3460;margin-bottom:16px;}.badge{background:linear-gradient(135deg,#6c3bfc,#3b82f6);color:white;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}.block{background:#f0f4ff;border:1.5px solid #c7d2fe;border-radius:8px;padding:12px;}.block-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#3730a3;margin-bottom:8px;border-bottom:1.5px solid #c7d2fe;padding-bottom:5px;}.row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:.5px solid #dde3f5;font-size:12px;}.row:last-child{border-bottom:none;}.rk{color:#4b5563;font-weight:500;}.rv{font-weight:700;color:#111827;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}th{background:#0f3460;color:white;padding:7px 8px;text-align:left;font-size:10px;font-weight:600;}td{padding:7px 8px;border-bottom:1px solid #f0f2f8;font-size:11px;vertical-align:top;}tr:nth-child(even) td{background:#f8f9ff;}.total-row td{background:#0f3460!important;color:white!important;font-weight:700;}.section-title{font-size:13px;font-weight:700;color:#0f3460;margin:14px 0 8px;padding-bottom:5px;border-bottom:2px solid #e8eaf6;}.footer{display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px;padding-top:14px;border-top:1px solid #e8eaf6;}.sign{text-align:center;}.sign-line{width:180px;border-top:1px solid #1a1a2e;margin:0 auto 5px;}.sign-name{font-size:12px;font-weight:700;}.sign-role{font-size:11px;color:#9ca3af;}@media print{body{padding:16px;}}';
   // Montar HTML via concatenacao segura
   const hdrHtml = '<div class="header">'
     + '<div style="display:flex;align-items:center;gap:12px;">'
@@ -3991,6 +3991,108 @@ window.abrirLocalEntregaParaPasta = function(localKey, cargaId) {
   $('leClienteId').value = '__pasta__' + localKey;
   $('leCargaId').value = cargaId;
   abrirLocalEntrega('__pasta__' + localKey, cargaId);
+};
+
+
+
+// ─── USUÁRIOS ────────────────────────────────────────────────────────────
+async function loadUsuarios() {
+  $('usuariosList').innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  try {
+    const snap = await getDocs(collection(db,'usuarios'));
+    const users = snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(b.criadoEm?._ts||0)-(a.criadoEm?._ts||0));
+    const pendentes = users.filter(u=>u.status==='pendente_aprovacao');
+    const ativos    = users.filter(u=>u.status==='aprovado'||u.status==='ativo');
+    const isGestor  = currentUser && currentUser.perfil==='gestor';
+    let html = '';
+
+    if (pendentes.length>0 && isGestor) {
+      html += `<div class="alert alert-a">👥 ${pendentes.length} solicitação(ões) aguardando aprovação</div>`;
+      html += pendentes.map(u=>`
+        <div class="li">
+          <div class="av" style="background:${avatarColor(u.nome||u.email)};color:#fff;">${initials(u.nome||u.email)}</div>
+          <div class="li-body">
+            <div class="li-title">${u.nome||u.email}</div>
+            <div class="li-sub">${u.email||''} · ${u.perfil||'—'} · ${u.cargo||'—'}</div>
+          </div>
+          <div class="li-right" style="gap:6px;">
+            <button class="btn-sm btn-green" onclick="aprovarUser('${u.id}')">✓ Aprovar</button>
+            <button class="btn-sm btn-red"   onclick="rejeitarUser('${u.id}')">Rejeitar</button>
+          </div>
+        </div>`).join('');
+    }
+
+    html += `<div style="padding:10px 16px 4px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">
+      Usuários ativos (${ativos.length + (isGestor?1:0)})</div>`;
+
+    // Gestor atual sempre primeiro
+    if (currentUser) {
+      html += `<div class="li">
+        <div class="av" style="background:${avatarColor(currentUser.nome)};color:#fff;">${initials(currentUser.nome||'G')}</div>
+        <div class="li-body">
+          <div class="li-title">${currentUser.nome||'—'} <span style="font-size:11px;color:var(--muted);">(você)</span></div>
+          <div class="li-sub">${currentUser.email||''} · ${currentUser.cargo||'—'}</div>
+        </div>
+        <div class="li-right"><span class="pill pb">Gestor</span></div>
+      </div>`;
+    }
+
+    html += ativos.filter(u=>u.id!==currentUser?.id).map(u=>`
+      <div class="li">
+        <div class="av" style="background:${avatarColor(u.nome||u.email)};color:#fff;">${initials(u.nome||u.email)}</div>
+        <div class="li-body">
+          <div class="li-title">${u.nome||u.email}</div>
+          <div class="li-sub">${u.email||''} · ${u.cargo||'—'}</div>
+        </div>
+        <div class="li-right">
+          <span class="pill ${u.perfil==='gestor'?'pb':u.perfil==='operacional'?'pg':'pz'}">${u.perfil||'—'}</span>
+          ${isGestor ? `<button class="btn-sm btn-red" onclick="revogarUser('${u.id}')" style="font-size:10px;padding:3px 8px;">Revogar</button>` : ''}
+        </div>
+      </div>`).join('');
+
+    if (isGestor) {
+      html += `<div style="padding:14px 16px 6px;">
+        <button class="btn btn-wa" onclick="openModal('modalConvidarUser')">📱 Convidar via WhatsApp</button>
+      </div>`;
+    }
+
+    $('usuariosList').innerHTML = html;
+  } catch(e) {
+    $('usuariosList').innerHTML = '<div style="padding:20px;color:var(--red);">Erro ao carregar usuários: ' + e.message + '</div>';
+  }
+}
+
+window.aprovarUser = async function(id) {
+  await updateDoc(doc(db,'usuarios',id), {
+    status:'aprovado', aprovadoEm: serverTimestamp(), aprovadoPor: currentUser.id
+  });
+  loadUsuarios();
+  loadHome();
+};
+
+window.rejeitarUser = async function(id) {
+  if (!confirm('Rejeitar este usuário?')) return;
+  await updateDoc(doc(db,'usuarios',id), { status:'rejeitado' });
+  loadUsuarios();
+};
+
+window.revogarUser = async function(id) {
+  if (!confirm('Revogar acesso deste usuário?')) return;
+  await updateDoc(doc(db,'usuarios',id), { status:'revogado' });
+  loadUsuarios();
+};
+
+window.enviarConviteWA = function() {
+  const nome   = $('invNome').value.trim();
+  const tel    = $('invTel').value.trim();
+  const email  = $('invEmail').value.trim();
+  const perfil = $('invPerfil').value;
+  if (!nome||!tel) { alert('Informe nome e telefone.'); return; }
+  const msg = `Olá, *${nome}*! 👋\n\nVocê foi convidado(a) para acessar o *DYA Soluções*, sistema de gestão logística da Maris Pescados.\n\n📱 *Acesse agora:*\nhttps://diegochaves87.github.io/dya-solucoes/\n\n📧 *Seu e-mail de acesso:* ${email||'(a definir)'}\n👤 *Perfil:* ${perfil}\n\nAo acessar pela primeira vez, complete seu cadastro.\n\n_Diego Chaves · DYA Soluções_`;
+  const numero = tel.replace(/\D/g,'');
+  window.open(`https://wa.me/55${numero}?text=${encodeURIComponent(msg)}`);
+  closeModal('modalConvidarUser');
 };
 
 
