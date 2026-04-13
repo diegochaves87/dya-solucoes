@@ -2374,18 +2374,21 @@ window.abrirCarga = async function(id) {
           <button class="btn-sm btn-amber" onclick="abrirLocalEntregaParaPasta('${lKey}','${id}')">📍 Trocar local</button>
         </div>` : '';
 
-      return `<div class="local-pasta" id="pasta_drag_${li}"
-        ondragover="event.preventDefault();"
-        ondrop="dropNaLocal(event,'${lKey}','${id}')">
-        <div class="local-pasta-hdr">
+      return `<div class="local-pasta" id="pasta_drag_${li}" data-lkey="${lKey}"
+        ondragover="handleDragOver(event,${li},'${lKey}')"
+        ondragleave="dragLeavePasta(event)"
+        ondrop="handleDrop(event,${li},'${lKey}','${id}')">
+        <div class="local-pasta-hdr" onclick="togglePasta('pastaBody_${li}')">
           <span class="cl-drag-handle" 
             draggable="true"
             ondragstart="dragPasta(event,${li},'${lKey}','${id}')"
-            ontouchstart="touchStartPasta(event,${li})"
+            ondragend="dragEndPasta(event)"
+            ontouchstart="touchStartPasta(event,${li},'${lKey}','${id}')"
             ontouchmove="touchMovePasta(event)"
             ontouchend="touchEndPasta(event,'${id}')"
             title="Arraste para reordenar"
-            onclick="event.stopPropagation()">⠿</span>
+            onclick="event.stopPropagation()"
+            style="cursor:grab;font-size:18px;padding:0 8px 0 0;color:var(--muted);">⠿</span>
           <div style="flex:1;" onclick="togglePasta('pasta_${li}')">
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="font-size:16px;">${locIcon}</span>
@@ -2399,7 +2402,7 @@ window.abrirCarga = async function(id) {
             <span id="arrow_pasta_${li}" style="color:var(--muted);font-size:16px;">▾</span>
           </div>
         </div>
-        <div id="pasta_${li}" style="display:block;">
+        <div id="pastaBody_${li}" style="display:block;">
           <div style="padding:8px 14px;">${notasHTML}</div>
           ${pastaActs}
         </div>
@@ -4129,6 +4132,27 @@ window.dragOverPasta = function(ev, idx) {
   ev.stopPropagation();
   const pasta = ev.currentTarget.closest ? ev.currentTarget.closest('.local-pasta') : ev.currentTarget;
   if (pasta) pasta.classList.add('drag-over');
+};
+
+window.handleDragOver = function(ev, idx, lKey) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  const pasta = ev.currentTarget;
+  if (pasta) pasta.classList.add('drag-over');
+};
+
+window.handleDrop = async function(ev, toIdx, toLKey, cargaId) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  document.querySelectorAll('.local-pasta').forEach(p=>p.classList.remove('drag-over'));
+  // Decidir qual tipo de drop
+  if (_dragPastaLKey && _dragPastaLKey !== toLKey) {
+    // Reordenação de pasta
+    await dropNaPasta(ev, toIdx, toLKey, cargaId);
+  } else if (_dragNFeId || _dragClienteId) {
+    // Mover NFe/cliente entre pastas
+    await dropNaLocal(ev, toLKey, cargaId);
+  }
 };
 
 window.dragLeavePasta = function(ev) {
