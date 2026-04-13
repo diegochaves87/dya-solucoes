@@ -1973,21 +1973,51 @@ window.gerarRomaneio = async function(cargaId) {
 
   // Agrupar por destino
   const gruposMap = {};
+  // Agrupar por NFe: cada NFe usa seu próprio local (prioridade) ou local do cliente
+  // Igual ao agrupamento da tela de detalhes
   clientes.forEach(cl => {
-    // Mesma chave usada na tela de detalhes para garantir consistência
-    const chave = cl.localEntregaId || '__nf__' + (cl.cidade||'') + '_' + (cl.uf||'');
-    if (!gruposMap[chave]) {
-      gruposMap[chave] = {
-        localNome: cl.localEntregaId ? (cl.localEntregaNome || '—') : (cl.cidade ? cl.cidade+'/'+cl.uf : '—'),
-        localEndereco: cl.localEntregaEndereco || '',
-        localCidade: cl.localEntregaCidade || cl.cidade || '',
-        localUF: cl.localEntregaUF || cl.uf || '',
-        agendNum: cl.agendNum || '',
-        clientes: [],
-        posicao: cl.posicao || 99
-      };
+    const nfesCliente = nfesArr2.filter(n=>n.clienteId===cl.id);
+    if (nfesCliente.length > 0) {
+      nfesCliente.forEach(n => {
+        const localId   = n.localEntregaId   || cl.localEntregaId   || null;
+        const localNome = n.localEntregaNome  || cl.localEntregaNome || null;
+        const localCid  = n.localEntregaCidade|| cl.localEntregaCidade|| cl.cidade || '';
+        const localUF   = n.localEntregaUF   || cl.localEntregaUF   || cl.uf || '';
+        const localEnd  = n.localEntregaEndereco|| cl.localEntregaEndereco|| '';
+        const chave     = localId || '__nf__' + localCid + '_' + localUF;
+        if (!gruposMap[chave]) {
+          gruposMap[chave] = {
+            localNome: localNome || (localCid ? localCid+'/'+localUF : '—'),
+            localEndereco: localEnd,
+            localCidade: localCid,
+            localUF: localUF,
+            agendNum: cl.agendNum || '',
+            clientes: [],
+            nfes: [],
+            posicao: cl.posicao || 99
+          };
+        }
+        if (!gruposMap[chave].clientes.find(c=>c.id===cl.id))
+          gruposMap[chave].clientes.push(cl);
+        gruposMap[chave].nfes.push({...n, clienteNome: cl.nome});
+      });
+    } else {
+      // Cliente sem NFes — usar local do cliente
+      const chave = cl.localEntregaId || '__nf__' + (cl.cidade||'') + '_' + (cl.uf||'');
+      if (!gruposMap[chave]) {
+        gruposMap[chave] = {
+          localNome: cl.localEntregaId ? (cl.localEntregaNome||'—') : (cl.cidade ? cl.cidade+'/'+cl.uf : '—'),
+          localEndereco: cl.localEntregaEndereco||'',
+          localCidade: cl.localEntregaCidade||cl.cidade||'',
+          localUF: cl.localEntregaUF||cl.uf||'',
+          agendNum: cl.agendNum||'',
+          clientes: [],
+          nfes: [],
+          posicao: cl.posicao||99
+        };
+      }
+      gruposMap[chave].clientes.push(cl);
     }
-    gruposMap[chave].clientes.push(cl);
   });
 
   const grupos = Object.values(gruposMap).sort((a,b)=>a.posicao-b.posicao);
@@ -2009,12 +2039,12 @@ window.gerarRomaneio = async function(cargaId) {
     g.posNum = i+1;
     const nomes = [...new Set(g.clientes.map(cl=>cl.nome||'—'))];
     g.clienteNomes = nomes.join(', ');
-    const clienteIds = g.clientes.map(cl=>cl.id);
-    const nfesGrupo = nfesArr2.filter(n=>clienteIds.includes(n.clienteId));
+    const nfesGrupo = g.nfes || [];
     g.pesoLiq = nfesGrupo.length>0 ? nfesGrupo.reduce((s,n)=>s+Number(n.pesoLiq||0),0) : g.clientes.reduce((s,cl)=>s+Number(cl.pesoLiq||0),0);
     g.valorTotal = nfesGrupo.length>0 ? nfesGrupo.reduce((s,n)=>s+Number(n.valorNFe||0),0) : g.clientes.reduce((s,cl)=>s+Number(cl.valorNF||cl.valorNFe||0),0);
     g.qtdNotas = nfesGrupo.length || g.clientes.length;
-    g.localEmbarque = g.clientes[0].localEmbarque || 'COMPESCAL';
+    g.localEmbarque = g.clientes[0] ? (g.clientes[0].localEmbarque || 'COMPESCAL') : 'COMPESCAL';
+    g.nfes = nfesGrupo;
   });
 
   const totalKg = grupos.reduce((s,g)=>s+g.pesoLiq,0);
