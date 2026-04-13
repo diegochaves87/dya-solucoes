@@ -1685,13 +1685,17 @@ async function loadCargas() {
   if (cargaFiltro==='concluidas') cargas = cargas.filter(c=>c.status==='concluida');
   if (cargas.length===0) { $('cargasList').innerHTML='<div class="empty"><div class="empty-i">🚛</div><div class="empty-t">Nenhuma carga</div><div class="empty-s">Toque no + para criar</div></div>'; return; }
   $('cargasList').innerHTML = '<div style="padding:10px 16px;display:flex;justify-content:flex-end;"><button class="btn-sm btn-blue" onclick="exportarCargas()">📥 Exportar CSV</button></div>' + cargas.map(c=>`
-    <div class="li" onclick="abrirCarga('${c.id}')">
-      <div class="av" style="background:${c.status==='provisoria'?'rgba(245,158,11,.15)':'rgba(108,59,252,.15)'};">${c.status==='provisoria'?'📋':'🚛'}</div>
-      <div class="li-body">
-        <div class="li-title">${c.embarque||'—'}</div>
-        <div class="li-sub">${c.rota||'—'} · ${c.frete||''} · ${fmtKg(c.pesoLiq)}</div>
+    <div class="li" style="position:relative;">
+      <div style="display:flex;align-items:center;gap:0;flex:1;" onclick="abrirCarga('${c.id}')" >
+        <div class="av" style="background:${c.status==='provisoria'?'rgba(245,158,11,.15)':'rgba(108,59,252,.15)'};">${c.status==='provisoria'?'📋':'🚛'}</div>
+        <div class="li-body">
+          <div class="li-title">${c.embarque||'—'}</div>
+          <div class="li-sub">${c.rota||'—'} · ${c.frete||''} · ${fmtKg(c.pesoLiq)}</div>
+        </div>
+        <div class="li-right">${statusPill(c.status)}<div style="font-size:11px;color:var(--muted);">${fmtData(c.dataSaida)}</div></div>
       </div>
-      <div class="li-right">${statusPill(c.status)}<div style="font-size:11px;color:var(--muted);">${fmtData(c.dataSaida)}</div></div>
+      ${c.status!=='concluida' ? `<button onclick="event.stopPropagation();confirmarExclusaoCarga('${c.id}','${(c.embarque||'').replace(/'/g,"\'")}')"
+        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:6px;color:var(--red);font-size:16px;opacity:.6;" title="Excluir carga">🗑️</button>` : ''}
     </div>`).join('');
 }
 
@@ -2247,10 +2251,15 @@ window.abrirCarga = async function(id) {
     </div>`;
   }
 
+  const isGestor = currentUser.perfil === 'gestor';
+  const isConcluida = c.status === 'concluida';
   let actions = '';
   if (isProv && isOp) actions += `<button class="btn-sm btn-green" onclick="openConverterProv('${id}')">✅ Converter para Ativa</button>`;
   if (isOp) actions += `<button class="btn-sm btn-blue" onclick="abrirEditarCarga('${id}')">✏️ Editar</button>`;
   if (isOp) actions += `<button class="btn-sm btn-red" onclick="submeterArquivamento('carga','${id}','${(c.embarque||'').replace(/'/g,"\'")}')">🗄️ Arquivar</button>`;
+  // Excluir: gestor direto (exceto concluídas), operacional solicita aprovação
+  if (!isConcluida && isGestor) actions += `<button class="btn-sm" onclick="excluirCargaDireto('${id}','${c.embarque||id}')" style="background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);">🗑️ Excluir</button>`;
+  if (!isConcluida && !isGestor && isOp) actions += `<button class="btn-sm" onclick="solicitarExclusaoCarga('${id}','${c.embarque||id}')" style="background:rgba(239,68,68,.08);color:var(--red);border:1px solid rgba(239,68,68,.2);">🗑️ Solicitar exclusão</button>`;
   if (isProv || c.status==='planejada'||c.status==='em_transito') actions += `<button class="btn-sm btn-blue" onclick="gerarRomaneio('${id}')">📋 Romaneio</button>`;
   if (c.status==='planejada' && isOp) actions += `<button class="btn-sm btn-purple" onclick="abrirCheckin('${id}')">🚛 Check-in</button>`;
   if (c.status==='em_transito' && isOp) actions += `<button class="btn-sm btn-red" onclick="encerrarCarga('${id}')">🏁 Encerrar</button>`;
@@ -4266,6 +4275,105 @@ window.touchEndPasta = async function(ev) {
   const toIdx = allPastas.indexOf(targetPasta);
   const toLKey = targetPasta.dataset.lkey;
   if (toLKey) await dropNaPasta({ preventDefault:()=>{}, currentTarget:{ closest:()=>targetPasta } }, toIdx, toLKey, _touchPastaCargaId);
+};
+
+
+
+// ─── EXCLUSÃO DE CARGA ───────────────────────────────────────────────────
+window.excluirCargaDireto = async function(cargaId, embarque) {
+  if (!confirm('Excluir carga ' + embarque + ' permanentemente? Esta ação não pode ser desfeita.')) return;
+  try {
+    // Excluir subcoleção de clientes
+    const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
+    for (const cl of clSnap.docs) {
+      await deleteDoc(doc(db,'cargas',cargaId,'clientes',cl.id));
+    }
+    // Excluir NFes da carga
+    const nfesSnap = await getDocs(collection(db,'nfes'));
+    for (const nf of nfesSnap.docs) {
+      if (String(nf.data().cargaId||'') === String(cargaId)) {
+        await deleteDoc(doc(db,'nfes',nf.id));
+      }
+    }
+    // Excluir a carga
+    await deleteDoc(doc(db,'cargas',cargaId));
+    goTo('cargas');
+    loadCargas();
+    mostrarFeedback('Carga ' + embarque + ' excluída.');
+  } catch(e) {
+    alert('Erro ao excluir: ' + e.message);
+  }
+};
+
+window.solicitarExclusaoCarga = async function(cargaId, embarque) {
+  if (!confirm('Solicitar exclusão da carga ' + embarque + '? O gestor precisará aprovar.')) return;
+  try {
+    const d = await getDoc(doc(db,'cargas',cargaId));
+    await addDoc(collection(db,'aprovacoes'), {
+      tipo: 'carga',
+      acao: 'excluir',
+      entidade: 'Carga ' + embarque,
+      entidadeId: cargaId,
+      dadosAntes: d.data(),
+      dadosDepois: null,
+      status: 'pendente',
+      solicitadoPor: currentUser.id,
+      solicitadoPorNome: currentUser.nome||currentUser.email,
+      criadoEm: serverTimestamp()
+    });
+    mostrarFeedback('Solicitação enviada! Aguardando aprovação do gestor.');
+    abrirCarga(cargaId);
+  } catch(e) {
+    alert('Erro ao solicitar: ' + e.message);
+  }
+};
+
+
+
+// ─── EXCLUIR CARGA ────────────────────────────────────────────────────────
+window.confirmarExclusaoCarga = async function(cargaId, embarque) {
+  const isGestorExcluir = currentUser && currentUser.perfil === 'gestor';
+
+  if (isGestorExcluir) {
+    // Gestor exclui diretamente
+    if (!confirm('Excluir carga ' + embarque + ' permanentemente?\nEsta ação não pode ser desfeita.')) return;
+    try {
+      // Excluir subcoleções de clientes
+      const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
+      for (const d of clSnap.docs) {
+        await deleteDoc(doc(db,'cargas',cargaId,'clientes',d.id));
+      }
+      // Excluir NFes da carga
+      const nfesSnap = await getDocs(collection(db,'nfes'));
+      for (const d of nfesSnap.docs) {
+        if (d.data().cargaId === cargaId) await deleteDoc(doc(db,'nfes',d.id));
+      }
+      // Excluir a carga
+      await deleteDoc(doc(db,'cargas',cargaId));
+      loadCargas();
+    } catch(e) { alert('Erro ao excluir: ' + e.message); }
+
+  } else {
+    // Operacional solicita aprovação
+    if (!confirm('Solicitar exclusão da carga ' + embarque + '?\nO gestor precisará aprovar.')) return;
+    try {
+      const d = await getDoc(doc(db,'cargas',cargaId));
+      const c = d.data();
+      await addDoc(collection(db,'aprovacoes'), {
+        tipo: 'carga',
+        acao: 'excluir',
+        entidade: embarque,
+        entidadeId: cargaId,
+        dadosAntes: { embarque: c.embarque, rota: c.rota, status: c.status, valorFrete: c.valorFrete },
+        dadosDepois: {},
+        status: 'pendente',
+        solicitadoPor: currentUser.id,
+        solicitadoPorNome: currentUser.nome || currentUser.email,
+        criadoEm: serverTimestamp()
+      });
+      alert('Solicitação enviada! O gestor será notificado.');
+    } catch(e) { alert('Erro ao solicitar: ' + e.message); }
+  }
 };
 
 
