@@ -1153,8 +1153,19 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:var(--t
     <div class="fld"><label>Peso Líquido (kg)</label><input type="number" id="enPesoLiq" step="0.001" placeholder="0,000"></div>
     <div class="fld"><label>Peso Bruto (kg)</label><input type="number" id="enPesoBruto" step="0.001" placeholder="0,000"></div>
     <div class="fld"><label>Observações</label><textarea id="enObs" rows="2" placeholder="Observações sobre esta nota..."></textarea></div>
+    <div style="border-top:1px solid var(--border);margin:12px 0 10px;padding-top:10px;">
+      <div style="font-size:11px;font-weight:700;color:var(--p2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">📍 Local de Entrega desta nota</div>
+      <div id="enLocalAtual" style="font-size:12px;color:var(--muted);margin-bottom:8px;"></div>
+      <div id="enLocaisLista" style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;"></div>
+      <button class="btn-sm btn-blue" onclick="carregarLocaisParaNFe()" style="font-size:12px;width:100%;">Trocar local de entrega</button>
+    </div>
     <input type="hidden" id="enId">
     <input type="hidden" id="enCargaId">
+    <input type="hidden" id="enLocalId">
+    <input type="hidden" id="enLocalNome">
+    <input type="hidden" id="enLocalCidade">
+    <input type="hidden" id="enLocalUF">
+    <input type="hidden" id="enLocalEndereco">
     <div style="display:flex;gap:8px;margin-top:4px;">
       <button class="btn btn-grad" onclick="salvarEdicaoNFe()" style="flex:1;">Salvar alterações</button>
       <button class="btn btn-red" onclick="excluirNFe()" style="flex:0 0 auto;padding:0 16px;">🗑️ Excluir</button>
@@ -2286,53 +2297,81 @@ window.abrirCarga = async function(id) {
   if (c.status==='em_transito') actions += `<button class="btn-sm btn-wa" onclick="waRomaneio('${id}')">📱 WA Romaneio</button>`;
 
   // Renderizar clientes
-  // ── PASTAS POR LOCAL DE ENTREGA ─────────────────────────────────────────
-  // Agrupar clientes por local de entrega
-  // local = localEntregaId se tiver, senão 'nf' (endereço da NF)
-  const locaisMap = {}; // localKey -> { nome, endereco, cidade, uf, clientes:[] }
+    // ── PASTAS POR LOCAL DE ENTREGA (agrupado por NFe) ─────────────────────
+  // Cada NFe pode ter seu próprio local — agrupar por local da NFe
+  // Se NFe não tem local → usa local do cliente → se não → cidade/UF do cliente
+  const locaisMap = {};
 
+  // Montar lista de todas as NFes com seu local resolvido
   clientes.forEach(cl => {
-    const lKey = cl.localEntregaId || '__nf__' + (cl.cidade||'') + '_' + (cl.uf||'');
-    if (!locaisMap[lKey]) {
-      if (cl.localEntregaId) {
-        locaisMap[lKey] = {
-          id: cl.localEntregaId,
-          nome: cl.localEntregaNome || 'Local ' + cl.localEntregaId,
-          cidade: cl.localEntregaCidade || cl.cidade || '—',
-          uf: cl.localEntregaUF || cl.uf || '—',
+    const nfesCliente = nfesMap[cl.id] || [];
+    if (nfesCliente.length > 0) {
+      nfesCliente.forEach(n => {
+        // Local da NFe (prioridade) ou do cliente ou cidade/UF
+        const localId   = n.localEntregaId   || cl.localEntregaId   || null;
+        const localNome = n.localEntregaNome  || cl.localEntregaNome || null;
+        const localCid  = n.localEntregaCidade|| cl.localEntregaCidade|| cl.cidade || '';
+        const localUF   = n.localEntregaUF   || cl.localEntregaUF   || cl.uf || '';
+        const localEnd  = n.localEntregaEndereco|| cl.localEntregaEndereco|| '';
+        const agendNum  = n.agendNum || cl.agendNum || '';
+        const chave     = localId || '__nf__' + localCid + '_' + localUF;
+
+        if (!locaisMap[chave]) {
+          locaisMap[chave] = {
+            id: localId,
+            nome: localNome || (localCid ? localCid + '/' + localUF : '—'),
+            endereco: localEnd,
+            cidade: localCid,
+            uf: localUF,
+            agendNum,
+            isNF: !localId,
+            nfes: [],
+            clientes: [],
+            posicao: n.posicaoLocal || cl.posicao || 99
+          };
+        }
+        // Adicionar a NFe ao grupo (com referência ao cliente)
+        locaisMap[chave].nfes.push({...n, _clienteNome: cl.nome, _clienteId: cl.id});
+        if (!locaisMap[chave].clientes.find(c=>c.id===cl.id)) {
+          locaisMap[chave].clientes.push(cl);
+        }
+      });
+    } else {
+      // Cliente sem NFes — usar local do cliente
+      const chave = cl.localEntregaId || '__nf__' + (cl.cidade||'') + '_' + (cl.uf||'');
+      if (!locaisMap[chave]) {
+        locaisMap[chave] = {
+          id: cl.localEntregaId || null,
+          nome: cl.localEntregaNome || (cl.cidade ? cl.cidade+'/'+cl.uf : '—'),
           endereco: cl.localEntregaEndereco || '',
-          isNF: false,
-          clientes: []
-        };
-      } else {
-        locaisMap[lKey] = {
-          id: null,
-          nome: (cl.cidade||'—') + '/' + (cl.uf||'—'),
-          cidade: cl.cidade||'—',
-          uf: cl.uf||'—',
-          endereco: '',
-          isNF: true,
-          clientes: []
+          cidade: cl.localEntregaCidade || cl.cidade || '',
+          uf: cl.localEntregaUF || cl.uf || '',
+          agendNum: cl.agendNum || '',
+          isNF: !cl.localEntregaId,
+          nfes: [],
+          clientes: [],
+          posicao: cl.posicao || 99
         };
       }
+      locaisMap[chave].clientes.push(cl);
     }
-    locaisMap[lKey].clientes.push(cl);
   });
 
-  // Calcular totais por local
+  // Calcular totais por pasta
   const rpkgGeral = totalKgClientes > 0 ? valorFrete / totalKgClientes : 0;
   Object.values(locaisMap).forEach(loc => {
-    loc.pesoTotal = loc.clientes.reduce((s,cl)=>s+Number(cl.pesoLiq||0),0);
-    loc.valorTotal = loc.clientes.reduce((s,cl)=>s+Number(cl.valorNF||cl.valorNFe||0),0);
-    loc.rateioTotal = rpkgGeral * loc.pesoTotal;
-    // NFes do local
-    loc.nfes = loc.clientes.flatMap(cl => nfesMap[cl.id]||[]);
-    const nfKg = loc.nfes.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
-    if (nfKg > 0) { loc.pesoTotal = nfKg; loc.rateioTotal = rpkgGeral * nfKg; }
-    loc.qtdNotas = loc.nfes.length || loc.clientes.length;
-    // Status do local: se todos entregues → entregue
-    const todos = loc.clientes.every(cl=>cl.status==='entregue');
-    loc.status = todos && loc.clientes.length > 0 ? 'entregue' : 'aguardando';
+    if (loc.nfes.length > 0) {
+      loc.pesoTotal   = loc.nfes.reduce((s,n)=>s+Number(n.pesoLiq||0),0);
+      loc.valorTotal  = loc.nfes.reduce((s,n)=>s+Number(n.valorNFe||0),0);
+      loc.rateioTotal = rpkgGeral * loc.pesoTotal;
+      loc.qtdNotas    = loc.nfes.length;
+    } else {
+      loc.pesoTotal   = loc.clientes.reduce((s,cl)=>s+Number(cl.pesoLiq||0),0);
+      loc.valorTotal  = loc.clientes.reduce((s,cl)=>s+Number(cl.valorNF||cl.valorNFe||0),0);
+      loc.rateioTotal = rpkgGeral * loc.pesoTotal;
+      loc.qtdNotas    = loc.clientes.length;
+    }
+    loc.status = loc.clientes.every(cl=>cl.status==='entregue') && loc.clientes.length > 0 ? 'entregue' : 'aguardando';
   });
 
   const locaisList = Object.entries(locaisMap);
@@ -2346,23 +2385,23 @@ window.abrirCarga = async function(id) {
       const locColor = isEntregue ? 'var(--green)' : (loc.isNF ? 'var(--muted)' : 'var(--p2)');
       const locIcon = loc.isNF ? '📄' : '📍';
 
-      // Notas dentro da pasta — lista flat de todas as NFes
+      // Notas dentro da pasta — cada NFe tem seu próprio local
       let notasHTML = '';
       if (loc.nfes.length > 0) {
         notasHTML = loc.nfes.map(n => {
-          const cl = clientes.find(c=>c.id===n.clienteId)||{};
+          const nfeId = n.__id || '';
           return `<div class="nfe-row" draggable="true"
-            ondragstart="dragNFe(event,'${n.__id||''}','${lKey}')"
+            ondragstart="dragNFe(event,'${nfeId}','${lKey}')"
             style="cursor:grab;">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
               <div>
                 <span class="nfe-key">NF </span><span class="nfe-val">${n.nfe}</span>
-                <span class="nfe-key" style="margin-left:6px;">${cl.nome||'—'}</span>
+                <span class="nfe-key" style="margin-left:6px;">${n._clienteNome||'—'}</span>
                 <span class="nfe-key" style="margin-left:4px;">${fmtData(n.dataFaturamento)}</span>
               </div>
-              <div style="display:flex;gap:4px;">
-                ${isOp ? `<button class="btn-sm btn-blue" onclick="abrirEditarNFe('${n.__id||''}','${id}')" style="font-size:10px;padding:2px 6px;">✏️</button>` : ''}
-                ${isOp && !isEntregue ? `<button class="btn-sm btn-red" onclick="abrirSinistro('${id}','${cl.id||''}')" style="font-size:10px;padding:2px 6px;">⚠️</button>` : ''}
+              <div style="display:flex;gap:4px;flex-shrink:0;">
+                ${isOp ? `<button class="btn-sm btn-blue" onclick="abrirEditarNFe('${nfeId}','${id}')" style="font-size:10px;padding:2px 6px;">✏️</button>` : ''}
+                ${isOp ? `<button class="btn-sm btn-amber" onclick="trocarLocalNFe('${nfeId}','${id}')" style="font-size:10px;padding:2px 6px;" title="Trocar local desta nota">📍</button>` : ''}
               </div>
             </div>
             <div style="display:flex;justify-content:space-between;margin-top:3px;">
@@ -2373,9 +2412,8 @@ window.abrirCarga = async function(id) {
         }).join('');
       } else {
         // Sem NFes — mostrar clientes
-        notasHTML = loc.clientes.map(cl => {
-          const nfesCliente = nfesMap[cl.id]||[];
-          return `<div class="nfe-row" draggable="true"
+        notasHTML = loc.clientes.map(cl => `
+          <div class="nfe-row" draggable="true"
             ondragstart="dragCliente(event,'${cl.id}','${lKey}')"
             style="cursor:grab;">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -2383,18 +2421,15 @@ window.abrirCarga = async function(id) {
               <span class="nfe-key" style="margin-left:6px;">${cl.cidade||'—'}/${cl.uf||'—'}</span></div>
               <div style="display:flex;gap:4px;">
                 ${isOp ? `<button class="btn-sm btn-blue" onclick="editarCliente('${id}','${cl.id}')" style="font-size:10px;padding:2px 6px;">✏️</button>` : ''}
-                ${isOp && !isEntregue ? `<button class="btn-sm btn-red" onclick="abrirSinistro('${id}','${cl.id}')" style="font-size:10px;padding:2px 6px;">⚠️</button>` : ''}
+                ${isOp ? `<button class="btn-sm btn-amber" onclick="abrirLocalEntrega('${cl.id}','${id}')" style="font-size:10px;padding:2px 6px;" title="Trocar local">📍</button>` : ''}
               </div>
             </div>
             <div style="display:flex;justify-content:space-between;margin-top:3px;">
               <span class="nfe-key">${fmtKg(cl.pesoLiq)} · ${fmtMoeda(cl.valorNF||cl.valorNFe)}</span>
               <span style="font-size:11px;color:var(--amber);">Rateio: ${fmtMoeda(rpkgGeral*(cl.pesoLiq||0))}</span>
             </div>
-          </div>`;
-        }).join('');
+          </div>`).join('');
       }
-
-      // Botões da pasta
       const pastaActs = isOp ? `
         <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px 12px;border-top:1px solid var(--border);">
           ${!isEntregue && !isProv ? `<button class="btn-sm btn-green" onclick="marcarLocalEntregue('${id}','${lKey}')">✓ Entregue</button>` : ''}
@@ -3530,6 +3565,15 @@ window.selecionarLocalEntrega = async function(localId, nome, cidade, uf) {
     localEntregaCidade: cidade, localEntregaUF: uf, localEntregaEndereco: endereco
   };
 
+  // Se for troca por NFe específica
+  if (clienteId.startsWith('__nfe__')) {
+    const nfeId = clienteId.replace('__nfe__', '');
+    await updateDoc(doc(db,'nfes',nfeId), dados);
+    closeModal('modalLocalEntrega');
+    abrirCarga(cargaId);
+    return;
+  }
+
   // Se for troca de pasta inteira
   if (clienteId.startsWith('__pasta__')) {
     const localKey = clienteId.replace('__pasta__', '');
@@ -3643,6 +3687,17 @@ window.abrirEditarNFe = async function(nfeId, cargaId) {
     $('enPesoLiq').value = n.pesoLiq||'';
     $('enPesoBruto').value = n.pesoBruto||'';
     $('enObs').value = n.obs||'';
+    // Local de entrega atual da nota
+    $('enLocalId').value = n.localEntregaId||'';
+    $('enLocalNome').value = n.localEntregaNome||'';
+    $('enLocalCidade').value = n.localEntregaCidade||'';
+    $('enLocalUF').value = n.localEntregaUF||'';
+    $('enLocalEndereco').value = n.localEntregaEndereco||'';
+    const localAtual = n.localEntregaNome
+      ? `📍 ${n.localEntregaNome} · ${n.localEntregaCidade||''}/${n.localEntregaUF||''}`
+      : '📄 Endereço da NFe (sem local definido)';
+    $('enLocalAtual').textContent = localAtual;
+    $('enLocaisLista').innerHTML = '';
     openModal('modalEditarNFe');
   } catch(e) {
     alert('Erro ao abrir NFe: ' + e.message);
@@ -3660,6 +3715,12 @@ window.salvarEdicaoNFe = async function() {
     pesoBruto: Number($('enPesoBruto').value)||0,
     obs: $('enObs').value.trim(),
     dataFaturamento: $('enDataFat').value ? Timestamp.fromDate(new Date($('enDataFat').value+'T12:00:00')) : null,
+    // Local de entrega por nota
+    localEntregaId: $('enLocalId').value || null,
+    localEntregaNome: $('enLocalNome').value || null,
+    localEntregaCidade: $('enLocalCidade').value || null,
+    localEntregaUF: $('enLocalUF').value || null,
+    localEntregaEndereco: $('enLocalEndereco').value || null,
     atualizadoEm: serverTimestamp()
   };
   await updateDoc(doc(db,'nfes',id), dados);
@@ -3797,6 +3858,20 @@ window.salvarCriarLocal = async function() {
   }
 
   abrirCarga(cargaId);
+};
+
+
+
+// ─── TROCAR LOCAL DE ENTREGA DE UMA NFe ESPECÍFICA ───────────────────────
+window.trocarLocalNFe = async function(nfeId, cargaId) {
+  if (!nfeId) { alert('NFe não identificada.'); return; }
+  // Reutilizar o modal de local de entrega mas salvar na NFe
+  window._trocarLocalNFeId = nfeId;
+  window._trocarLocalNFeCargaId = cargaId;
+  // Sinalizar que é troca por NFe
+  $('leClienteId').value = '__nfe__' + nfeId;
+  $('leCargaId').value = cargaId;
+  await abrirLocalEntrega('__nfe__' + nfeId, cargaId);
 };
 
 
@@ -4409,6 +4484,51 @@ window.confirmarExclusaoCarga = async function(cargaId, embarque) {
       alert('Solicitação enviada! O gestor será notificado.');
     } catch(e) { alert('Erro ao solicitar: ' + e.message); }
   }
+};
+
+
+
+// ─── LOCAL POR NFe ────────────────────────────────────────────────────────
+window.carregarLocaisParaNFe = async function() {
+  const lista = $('enLocaisLista');
+  lista.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  try {
+    const snap = await getDocs(collection(db,'locais_entrega'));
+    const locais = snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(a.nome||'').localeCompare(b.nome||''));
+
+    let html = `<div class="li" style="padding:8px 12px;cursor:pointer;"
+        onclick="selecionarLocalParaNFe(null,'','','','')">
+      <div class="li-body">
+        <div class="li-title" style="font-size:12px;">📄 Endereço da NFe (remover local)</div>
+      </div>
+    </div>`;
+
+    html += locais.map(l=>`
+      <div class="li" style="padding:8px 12px;cursor:pointer;"
+          onclick="selecionarLocalParaNFe('${l.id}','${(l.nome||'').replace(/'/g,"\'")}','${l.cidade||''}','${l.uf||''}','${(l.endereco||'').replace(/'/g,"\'")}')">
+        <div class="li-body">
+          <div class="li-title" style="font-size:12px;">${l.nome}</div>
+          <div class="li-sub">${l.endereco?l.endereco+' · ':''} ${l.cidade||'—'}/${l.uf||'—'}</div>
+        </div>
+        <div class="li-right"><span style="font-size:11px;color:var(--p2);">Selecionar →</span></div>
+      </div>`).join('');
+
+    lista.innerHTML = html;
+  } catch(e) {
+    lista.innerHTML = '<div style="padding:10px;color:var(--muted);">Erro ao carregar locais.</div>';
+  }
+};
+
+window.selecionarLocalParaNFe = function(localId, nome, cidade, uf, endereco) {
+  $('enLocalId').value = localId || '';
+  $('enLocalNome').value = nome || '';
+  $('enLocalCidade').value = cidade || '';
+  $('enLocalUF').value = uf || '';
+  $('enLocalEndereco').value = endereco || '';
+  const txt = nome ? `📍 ${nome} · ${cidade}/${uf}` : '📄 Endereço da NFe (sem local definido)';
+  $('enLocalAtual').textContent = txt;
+  $('enLocaisLista').innerHTML = '';
 };
 
 
