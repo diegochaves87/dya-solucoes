@@ -1940,10 +1940,11 @@ window.gerarRomaneio = async function(cargaId) {
   // Agrupar por destino
   const gruposMap = {};
   clientes.forEach(cl => {
-    const chave = cl.localEntregaId || cl.grupoEntregaId || cl.id;
+    // Mesma chave usada na tela de detalhes para garantir consistência
+    const chave = cl.localEntregaId || '__nf__' + (cl.cidade||'') + '_' + (cl.uf||'');
     if (!gruposMap[chave]) {
       gruposMap[chave] = {
-        localNome: cl.localEntregaNome || (cl.cidade ? cl.cidade+'/'+cl.uf : '—'),
+        localNome: cl.localEntregaId ? (cl.localEntregaNome || '—') : (cl.cidade ? cl.cidade+'/'+cl.uf : '—'),
         localEndereco: cl.localEntregaEndereco || '',
         localCidade: cl.localEntregaCidade || cl.cidade || '',
         localUF: cl.localEntregaUF || cl.uf || '',
