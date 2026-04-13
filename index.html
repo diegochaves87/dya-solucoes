@@ -1142,6 +1142,25 @@ body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;color:var(--t
     <button class="btn btn-grad" onclick="salvarCriarLocal()">Criar local e adicionar à carga</button>
   </div>
 </div>
+
+<!-- Modal: Editar NFe -->
+<div class="modal-bg" id="modalEditarNFe">
+  <div class="modal">
+    <div class="modal-title">Editar NFe <button class="modal-close" onclick="closeModal('modalEditarNFe')">×</button></div>
+    <div class="fld"><label>Número da NFe</label><input type="text" id="enNFe" placeholder="Ex: 152937"></div>
+    <div class="fld"><label>Data de faturamento</label><input type="date" id="enDataFat"></div>
+    <div class="fld"><label>Valor da NFe (R$)</label><input type="number" id="enValorNFe" step="0.01" placeholder="0,00"></div>
+    <div class="fld"><label>Peso Líquido (kg)</label><input type="number" id="enPesoLiq" step="0.001" placeholder="0,000"></div>
+    <div class="fld"><label>Peso Bruto (kg)</label><input type="number" id="enPesoBruto" step="0.001" placeholder="0,000"></div>
+    <div class="fld"><label>Observações</label><textarea id="enObs" rows="2" placeholder="Observações sobre esta nota..."></textarea></div>
+    <input type="hidden" id="enId">
+    <input type="hidden" id="enCargaId">
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="btn btn-grad" onclick="salvarEdicaoNFe()" style="flex:1;">Salvar alterações</button>
+      <button class="btn btn-red" onclick="excluirNFe()" style="flex:0 0 auto;padding:0 16px;">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
 <script>
 
 // ═══════════════════════════════════════════════════════════════════
@@ -3647,6 +3666,22 @@ window.salvarEdicaoNFe = async function() {
   closeModal('modalEditarNFe');
   abrirCarga(cargaId);
 };
+
+window.excluirNFe = async function() {
+  const id = $('enId').value;
+  const cargaId = $('enCargaId').value;
+  if (!id) return;
+  const nfeNum = $('enNFe').value || id;
+  if (!confirm('Excluir a NFe ' + nfeNum + '?\nEsta ação não pode ser desfeita.')) return;
+  try {
+    await deleteDoc(doc(db,'nfes',id));
+    closeModal('modalEditarNFe');
+    abrirCarga(cargaId);
+  } catch(e) {
+    alert('Erro ao excluir NFe: ' + e.message);
+  }
+};
+
 
 
 
