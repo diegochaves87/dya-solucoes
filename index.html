@@ -4112,33 +4112,50 @@ window.dragPasta = function(ev, idx, lKey, cargaId) {
   _dragPastaLKey = lKey;
   _dragPastaCargaId = cargaId;
   ev.dataTransfer.effectAllowed = 'move';
-  ev.currentTarget.closest('.local-pasta').style.opacity = '0.5';
+  ev.dataTransfer.setData('text/plain', lKey); // necessário para Firefox
+  const pasta = ev.currentTarget.closest ? ev.currentTarget.closest('.local-pasta') : ev.currentTarget;
+  if (pasta) pasta.style.opacity = '0.5';
 };
 
 window.dragEndPasta = function(ev) {
-  ev.currentTarget.closest('.local-pasta').style.opacity = '1';
+  document.querySelectorAll('.local-pasta').forEach(p=>{
+    p.style.opacity='1'; p.classList.remove('drag-over');
+  });
+  _dragPastaIdx = null; _dragPastaLKey = null;
 };
 
 window.dragOverPasta = function(ev, idx) {
   ev.preventDefault();
-  ev.currentTarget.closest('.local-pasta').classList.add('drag-over');
+  ev.stopPropagation();
+  const pasta = ev.currentTarget.closest ? ev.currentTarget.closest('.local-pasta') : ev.currentTarget;
+  if (pasta) pasta.classList.add('drag-over');
 };
 
 window.dragLeavePasta = function(ev) {
-  ev.currentTarget.closest('.local-pasta').classList.remove('drag-over');
+  const pasta = ev.currentTarget.closest ? ev.currentTarget.closest('.local-pasta') : ev.currentTarget;
+  if (pasta) pasta.classList.remove('drag-over');
 };
 
 window.dropNaPasta = async function(ev, toIdx, toLKey, cargaId) {
   ev.preventDefault();
-  ev.currentTarget.closest('.local-pasta').classList.remove('drag-over');
-  if (_dragPastaIdx === null || _dragPastaIdx === toIdx) return;
+  ev.stopPropagation();
+  // Limpar highlight
+  document.querySelectorAll('.local-pasta').forEach(p=>p.classList.remove('drag-over'));
 
-  // Buscar todos os clientes ordenados por posição atual
+  // Ignorar drop na mesma pasta
+  if (!_dragPastaLKey || _dragPastaLKey === toLKey) {
+    _dragPastaIdx = null; _dragPastaLKey = null; return;
+  }
+
+  const fromLKey = _dragPastaLKey;
+  _dragPastaIdx = null; _dragPastaLKey = null;
+
+  // Buscar clientes
   const clSnap = await getDocs(collection(db,'cargas',cargaId,'clientes'));
   const clientes = clSnap.docs.map(d=>({id:d.id,...d.data()}))
     .sort((a,b)=>(a.posicao||99)-(b.posicao||99));
 
-  // Agrupar por lKey preservando a ordem
+  // Construir ordem atual de grupos
   const gruposOrdem = [];
   const seen = new Set();
   clientes.forEach(cl => {
@@ -4146,14 +4163,16 @@ window.dropNaPasta = async function(ev, toIdx, toLKey, cargaId) {
     if (!seen.has(k)) { seen.add(k); gruposOrdem.push(k); }
   });
 
-  // Reordenar: mover fromIdx para toIdx
-  const fromIdx = gruposOrdem.indexOf(_dragPastaLKey);
+  // Mover fromLKey para antes de toLKey
+  const fromIdx = gruposOrdem.indexOf(fromLKey);
+  const toIdxG  = gruposOrdem.indexOf(toLKey);
   if (fromIdx < 0) { abrirCarga(cargaId); return; }
-  gruposOrdem.splice(fromIdx, 1);
-  const toIdxFinal = gruposOrdem.indexOf(toLKey);
-  gruposOrdem.splice(toIdxFinal >= 0 ? toIdxFinal : toIdx, 0, _dragPastaLKey);
 
-  // Salvar nova posição de cada cliente
+  gruposOrdem.splice(fromIdx, 1);
+  const newTo = gruposOrdem.indexOf(toLKey);
+  gruposOrdem.splice(newTo >= 0 ? newTo : gruposOrdem.length, 0, fromLKey);
+
+  // Salvar posições
   let pos = 1;
   for (const gKey of gruposOrdem) {
     const doGrupo = clientes.filter(cl => {
@@ -4164,9 +4183,6 @@ window.dropNaPasta = async function(ev, toIdx, toLKey, cargaId) {
       await updateDoc(doc(db,'cargas',cargaId,'clientes',cl.id), { posicao: pos++ });
     }
   }
-
-  _dragPastaIdx = null;
-  _dragPastaLKey = null;
   abrirCarga(cargaId);
 };
 
